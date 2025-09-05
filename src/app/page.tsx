@@ -661,9 +661,9 @@ export default function RecipeSavvyPage() {
         return (
           <motion.div
             key="search-view"
-            initial={{ opacity: 0, x: '-100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, x: '-100%' }}
             transition={{ duration: 0.3 }}
           >
             {isApiKeyMissing && (
@@ -895,7 +895,7 @@ export default function RecipeSavvyPage() {
             key="details-view"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '-100%' }}
+            exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3 }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
