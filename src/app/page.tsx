@@ -30,7 +30,6 @@ import {
   Heart,
   Settings,
   BookHeart,
-  MessageSquare,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -472,18 +471,18 @@ export default function RecipeSavvyPage() {
           </AnimatePresence>
         </div>
       </main>
-      
+
       {selectedRecipe && recipeDetails.data && apiKey && (
-        <RecipeChatbot 
-            recipe={{
-                name: selectedRecipe,
-                ...recipeDetails.data,
-            }} 
-            apiKey={apiKey}
+        <RecipeChatbot
+          recipe={{
+            name: selectedRecipe,
+            ...recipeDetails.data,
+          }}
+          apiKey={apiKey}
         />
       )}
-      
-      <SettingsDialog 
+
+      <SettingsDialog
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
         apiKey={apiKey}
