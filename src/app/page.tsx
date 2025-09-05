@@ -11,6 +11,7 @@ import { troubleshootStep } from '@/ai/flows/troubleshoot-step';
 import { generateRelatedRecipes } from '@/ai/flows/generate-related-recipes';
 import { identifyTimedSteps, type IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
 import { generateCookingTip } from '@/ai/flows/generate-cooking-tip';
+import { generateRandomRecipes } from '@/ai/flows/generate-random-recipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -56,6 +57,7 @@ import {
   BellOff,
   Lightbulb,
   Wand2,
+  Dices,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -87,7 +89,6 @@ type CookbookRecipe = {
   details: RecipeDetailsOutput;
 };
 
-type Mode = 'ingredients' | 'recipe';
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
 
 const MAX_TIPS = 15;
@@ -96,7 +97,6 @@ const MIN_TIP_INTERVAL_MS = 60 * 1000; // 1 minute
 const MAX_TIP_INTERVAL_MS = 8 * 60 * 1000; // 8 minutes
 
 export default function RecipeSavvyPage() {
-  const [mode, setMode] = useState<Mode>('ingredients');
   const [currentView, setCurrentView] = useState<View>('search');
   
   const [ingredients, setIngredients] = useState<string[]>(['Flour', 'Eggs', 'Sugar']);
@@ -109,6 +109,9 @@ export default function RecipeSavvyPage() {
   const [generatedRecipes, setGeneratedRecipes] = useState<string[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
   const [showAllRecipes, setShowAllRecipes] = useState(false);
+  
+  const [suggestedRecipes, setSuggestedRecipes] = useState<string[]>([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(true);
 
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetailsState>({
@@ -243,6 +246,13 @@ export default function RecipeSavvyPage() {
   }, []);
   
   useEffect(() => {
+    if (apiKey) {
+      fetchSuggestions();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
+  
+  useEffect(() => {
     localStorage.setItem('shownTips', JSON.stringify(shownTips));
   }, [shownTips]);
   
@@ -262,11 +272,30 @@ export default function RecipeSavvyPage() {
         }
     }
   }, [scheduleNextTip]);
+
+  const fetchSuggestions = async () => {
+    setIsGeneratingSuggestions(true);
+    try {
+      const { recipes } = await generateRandomRecipes({
+        count: 2,
+        apiKey: apiKey!,
+        model,
+      });
+      setSuggestedRecipes(recipes);
+    } catch (error) {
+      console.error("Failed to fetch suggested recipes:", error);
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
+  };
   
   const handleApiKeyChange = (newApiKey: string | null) => {
     setApiKey(newApiKey);
     if (newApiKey) {
         setIsApiKeyMissing(false);
+        if (suggestedRecipes.length === 0) {
+          fetchSuggestions();
+        }
     } else {
         setIsApiKeyMissing(true);
     }
@@ -371,9 +400,10 @@ export default function RecipeSavvyPage() {
     [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model]
   );
   
-  const handleGetRecipe = useCallback(async () => {
+  const handleGetRecipe = useCallback(async (name?: string) => {
+    const recipeToGet = name || recipeName;
     if (!ensureApiKey()) return;
-    if (!recipeName.trim()) {
+    if (!recipeToGet.trim()) {
       toast({
         variant: 'destructive',
         title: 'No Recipe Name',
@@ -381,7 +411,7 @@ export default function RecipeSavvyPage() {
       });
       return;
     }
-    handleSelectRecipe(recipeName);
+    handleSelectRecipe(recipeToGet);
   }, [recipeName, ensureApiKey, toast, handleSelectRecipe]);
 
 
@@ -430,6 +460,33 @@ export default function RecipeSavvyPage() {
     }
   }, [ingredients, isHalal, useAllergens, allergens, apiKey, toast, ensureApiKey, model]);
 
+  const handleSurpriseMe = useCallback(async () => {
+    if (!ensureApiKey()) return;
+    
+    setIsGeneratingRecipes(true); // Use the same loading state for a consistent feel
+    try {
+      const { recipes } = await generateRandomRecipes({ count: 1, apiKey: apiKey!, model });
+      if (recipes && recipes.length > 0) {
+        await handleGetRecipe(recipes[0]);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Oh no!',
+          description: "Couldn't come up with a surprise. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error("Surprise me failed:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to find a surprise recipe. Please try again.',
+      });
+    } finally {
+      setIsGeneratingRecipes(false);
+    }
+  }, [apiKey, ensureApiKey, handleGetRecipe, model, toast]);
+
   useEffect(() => {
     if (generatedRecipes.length > 0 && resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -447,7 +504,7 @@ export default function RecipeSavvyPage() {
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setShowCookbook(false);
-    if (mode === 'ingredients' && generatedRecipes.length > 0) {
+    if (generatedRecipes.length > 0) {
       setTimeout(() => {
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -687,14 +744,10 @@ export default function RecipeSavvyPage() {
                 <CardTitle className="font-headline text-2xl">
                   Find your next meal
                 </CardTitle>
-                <CardDescription>
-                  Switch between finding recipes by ingredients or by name.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs
-                  value={mode}
-                  onValueChange={v => setMode(v as Mode)}
+                  defaultValue="ingredients"
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
@@ -789,8 +842,7 @@ export default function RecipeSavvyPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex-col sm:flex-row gap-2">
-                {mode === 'ingredients' ? (
-                  <Button
+                 <Button
                     onClick={handleGenerateRecipes}
                     disabled={isGeneratingRecipes || ingredients.length === 0 || isApiKeyMissing}
                     className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
@@ -802,27 +854,27 @@ export default function RecipeSavvyPage() {
                     )}
                     Find Recipes
                   </Button>
-                ) : (
+
                   <Button
-                    onClick={handleGetRecipe}
-                    disabled={recipeDetails.isLoading || !recipeName || isApiKeyMissing}
-                    className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
-                  >
-                    {recipeDetails.isLoading ? (
-                      <LoaderCircle className="animate-spin mr-2" />
-                    ) : (
-                      <Sparkles className="mr-2" />
-                    )}
-                    Get Recipe
-                  </Button>
-                )}
-                {(ingredients.length > 3 || generatedRecipes.length > 0 || recipeName) && (
-                  <Button
-                    onClick={handleStartOver}
+                    onClick={handleSurpriseMe}
                     variant="outline"
+                    disabled={isGeneratingRecipes || isApiKeyMissing}
                     className="w-full sm:w-auto"
                   >
-                    Start Over
+                     <Dices className="mr-2" />
+                    Surprise Me
+                  </Button>
+                
+                {(ingredients.length > 3 || recipeName) && (
+                  <Button
+                    onClick={() => {
+                        setIngredients([]);
+                        setRecipeName('');
+                    }}
+                    variant="ghost"
+                    className="w-full sm:w-auto"
+                  >
+                    Clear
                   </Button>
                 )}
               </CardFooter>
@@ -844,6 +896,42 @@ export default function RecipeSavvyPage() {
                     </p>
                   </motion.div>
                 )}
+                
+                {!isGeneratingRecipes && generatedRecipes.length === 0 && (
+                  <motion.div>
+                     <h2 className="text-3xl font-headline text-center mb-6">
+                      Try these recipes
+                    </h2>
+                    {isGeneratingSuggestions && (
+                      <div className="flex justify-center">
+                        <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {suggestedRecipes.map(
+                        recipe => (
+                          <motion.div
+                            key={recipe}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            whileHover={{ scale: 1.03, y: -5 }}
+                            onClick={() => handleSelectRecipe(recipe)}
+                          >
+                            <Card
+                              className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
+                            >
+                              <CardTitle className="font-headline text-xl">
+                                {recipe}
+                              </CardTitle>
+                            </Card>
+                          </motion.div>
+                        )
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
                 {generatedRecipes.length > 0 && !isGeneratingRecipes && (
                   <motion.div
                     key="recipe-list"
@@ -877,7 +965,7 @@ export default function RecipeSavvyPage() {
                         )
                       )}
                     </div>
-                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && (
+                     {generatedRecipes.length > 4 && !showAllRecipes && (
                         <div className="mt-6 text-center">
                             <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
                         </div>
@@ -899,7 +987,7 @@ export default function RecipeSavvyPage() {
             transition={{ duration: 0.3 }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to {mode === 'ingredients' && generatedRecipes.length > 0 ? 'Results' : 'Search'}
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to {generatedRecipes.length > 0 ? 'Results' : 'Search'}
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
