@@ -17,6 +17,7 @@ const GenerateRecipesFromIngredientsInputSchema = z.object({
     .array(z.string())
     .describe('A list of ingredients that the user has on hand.'),
   halalMode: z.boolean().optional().describe('Whether to only suggest halal recipes.'),
+  allergens: z.array(z.string()).optional().describe('A list of allergens to avoid.'),
   apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().optional().describe('The model to use for generation.'),
 });
@@ -45,6 +46,7 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateRecipesFromIngredientsOutputSchema},
   prompt: `You are a recipe expert. A user has the following ingredients. Suggest 8-10 diverse recipes they can make. Prioritize recipes that use more of the provided ingredients.
 {{#if halalMode}}Only suggest halal recipes.{{/if}}
+{{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Do not suggest recipes containing these ingredients.{{/if}}
 
 Ingredients:
 {{#each ingredients}}- {{this}}\n{{/each}}`,

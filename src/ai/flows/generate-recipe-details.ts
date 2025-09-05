@@ -2,11 +2,12 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {ModelId} from '@genkit-ai/googleai';
+import {ModelId} from '@genkey-ai/googleai';
 
 const RecipeDetailsInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe to get details for.'),
   halalMode: z.boolean().optional().describe('Whether to make the recipe halal.'),
+  allergens: z.array(z.string()).optional().describe('A list of allergens to avoid.'),
   apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().optional().describe('The model to use for generation.'),
 });
@@ -34,6 +35,7 @@ const prompt = ai.definePrompt({
   prompt: `You are a world-class chef. A user wants to cook "{{recipeName}}". 
   
   {{#if halalMode}}The user requires a halal version of this recipe. Ensure all ingredients and preparation steps are halal.{{/if}}
+  {{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Ensure the recipe does not contain these ingredients.{{/if}}
 
   Provide a detailed recipe including:
   1. A short, mouth-watering description of the dish.

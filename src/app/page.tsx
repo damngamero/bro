@@ -55,13 +55,15 @@ import {
   Timer,
   BellOff,
   Lightbulb,
+  Wand2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
+import { AllergensDialog } from '@/components/allergens-dialog';
+import { VariationDialog } from '@/components/variation-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 
@@ -101,6 +103,8 @@ export default function RecipeSavvyPage() {
   const [newIngredient, setNewIngredient] = useState('');
   const [recipeName, setRecipeName] = useState('');
   const [isHalal, setIsHalal] = useState(false);
+  const [useAllergens, setUseAllergens] = useState(false);
+  const [allergens, setAllergens] = useState<string[]>([]);
 
   const [generatedRecipes, setGeneratedRecipes] = useState<string[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
@@ -118,6 +122,9 @@ export default function RecipeSavvyPage() {
   const [showCookbook, setShowCookbook] = useState(false);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAllergensOpen, setIsAllergensOpen] = useState(false);
+  const [isVariationOpen, setIsVariationOpen] = useState(false);
+
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [model, setModel] = useState<ModelId>('googleai/gemini-2.5-pro');
@@ -224,11 +231,28 @@ export default function RecipeSavvyPage() {
     if (storedTips) {
         setShownTips(JSON.parse(storedTips));
     }
+
+    const storedAllergens = localStorage.getItem('userAllergens');
+    if (storedAllergens) {
+      setAllergens(JSON.parse(storedAllergens));
+    }
+    const storedUseAllergens = localStorage.getItem('useAllergens');
+    if(storedUseAllergens) {
+      setUseAllergens(JSON.parse(storedUseAllergens));
+    }
   }, []);
   
   useEffect(() => {
     localStorage.setItem('shownTips', JSON.stringify(shownTips));
   }, [shownTips]);
+  
+  useEffect(() => {
+    localStorage.setItem('userAllergens', JSON.stringify(allergens));
+  }, [allergens]);
+  
+  useEffect(() => {
+    localStorage.setItem('useAllergens', JSON.stringify(useAllergens));
+  }, [useAllergens]);
 
   useEffect(() => {
     scheduleNextTip();
@@ -279,7 +303,7 @@ export default function RecipeSavvyPage() {
   }, [apiKey, toast]);
 
   const handleSelectRecipe = useCallback(
-    async (recipeName: string) => {
+    async (recipeName: string, newDetails?: RecipeDetailsOutput) => {
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
@@ -287,6 +311,16 @@ export default function RecipeSavvyPage() {
       setShowCookbook(false); 
       setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
 
+      if (newDetails) {
+        const timedStepsResult = await identifyTimedSteps({
+          instructions: newDetails.instructions,
+          apiKey: apiKey!,
+          model,
+        });
+        setRecipeDetails({ isLoading: false, data: newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
+        return;
+      }
+      
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
       if (cookbookRecipe) {
         const timedStepsResult = await identifyTimedSteps({
@@ -307,6 +341,7 @@ export default function RecipeSavvyPage() {
         const details = await generateRecipeDetails({
           recipeName,
           halalMode: isHalal,
+          allergens: useAllergens ? allergens : undefined,
           apiKey: apiKey!,
           model,
         });
@@ -333,7 +368,7 @@ export default function RecipeSavvyPage() {
         });
       }
     },
-    [apiKey, isHalal, toast, cookbook, ensureApiKey, model]
+    [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model]
   );
   
   const handleGetRecipe = useCallback(async () => {
@@ -371,6 +406,7 @@ export default function RecipeSavvyPage() {
       const result = await generateRecipesFromIngredients({
         ingredients,
         halalMode: isHalal,
+        allergens: useAllergens ? allergens : undefined,
         apiKey: apiKey!,
         model,
       });
@@ -392,7 +428,7 @@ export default function RecipeSavvyPage() {
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, apiKey, toast, ensureApiKey, model]);
+  }, [ingredients, isHalal, useAllergens, allergens, apiKey, toast, ensureApiKey, model]);
 
   useEffect(() => {
     if (generatedRecipes.length > 0 && resultsRef.current) {
@@ -739,9 +775,17 @@ export default function RecipeSavvyPage() {
                     </Card>
                   </TabsContent>
                 </Tabs>
-                <div className="flex items-center space-x-2 mt-4">
-                  <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
-                  <Label htmlFor="halal-mode">Halal Mode</Label>
+                <div className="flex items-center space-x-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
+                    <Label htmlFor="halal-mode">Halal Mode</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch id="allergens-mode" checked={useAllergens} onCheckedChange={setUseAllergens} disabled={isApiKeyMissing}/>
+                    <Button variant="link" className="p-0 h-auto" onClick={() => setIsAllergensOpen(true)}>
+                      Allergens
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex-col sm:flex-row gap-2">
@@ -859,8 +903,8 @@ export default function RecipeSavvyPage() {
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1">
                     <CardTitle className="font-headline text-3xl">
                       {selectedRecipe}
                     </CardTitle>
@@ -871,21 +915,32 @@ export default function RecipeSavvyPage() {
                     )}
                   </div>
                   {recipeDetails.data && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        toggleCookbookRecipe(selectedRecipe!, recipeDetails.data!)
-                      }
-                    >
-                      <Heart
-                        className={
-                          isInCookbook(selectedRecipe!)
-                            ? 'fill-red-500 text-red-500'
-                            : ''
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsVariationOpen(true)}
+                      >
+                          <Wand2 />
+                          <span className="sr-only">Make a variation</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          toggleCookbookRecipe(selectedRecipe!, recipeDetails.data!)
                         }
-                      />
-                    </Button>
+                      >
+                        <Heart
+                          className={
+                            isInCookbook(selectedRecipe!)
+                              ? 'fill-red-500 text-red-500'
+                              : ''
+                          }
+                        />
+                         <span className="sr-only">Add to cookbook</span>
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>
@@ -1189,6 +1244,28 @@ export default function RecipeSavvyPage() {
         onModelChange={handleAddModel}
       />
       
+      <AllergensDialog
+        isOpen={isAllergensOpen}
+        onOpenChange={setIsAllergensOpen}
+        allergens={allergens}
+        onAllergensChange={setAllergens}
+      />
+      
+      {recipeDetails.data && (
+        <VariationDialog
+          isOpen={isVariationOpen}
+          onOpenChange={setIsVariationOpen}
+          recipeName={selectedRecipe!}
+          recipeDetails={recipeDetails.data}
+          apiKey={apiKey}
+          model={model}
+          onVariationCreated={(newName, newDetails) => {
+            handleSelectRecipe(newName, newDetails);
+            setIsVariationOpen(false);
+          }}
+        />
+      )}
+      
       <Dialog open={isTroubleshootDialogOpen} onOpenChange={setIsTroubleshootDialogOpen}>
         <DialogContent>
             <DialogHeader>
@@ -1237,5 +1314,3 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
-
-    

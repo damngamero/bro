@@ -8,3 +8,4 @@ import '@/ai/flows/troubleshoot-step.ts';
 import '@/ai/flows/generate-related-recipes.ts';
 import '@/ai/flows/identify-timed-steps.ts';
 import '@/ai/flows/generate-cooking-tip.ts';
+import '@/ai/flows/generate-recipe-variation.ts';
