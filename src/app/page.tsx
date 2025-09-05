@@ -613,7 +613,7 @@ export default function RecipeSavvyPage() {
       setCurrentView(previousState.view);
       setSelectedRecipe(previousState.recipeName);
       if(previousState.view === 'details' && previousState.recipeName) {
-        handleSelectRecipe(previousState.recipeName, undefined, previousState.recipeDetails)
+        setRecipeDetails(previousState.recipeDetails)
       } else {
         setRecipeDetails(previousState.recipeDetails);
       }
@@ -826,7 +826,7 @@ export default function RecipeSavvyPage() {
                         Please set your Google AI API key in the settings to use the app.
                         <Button
                             variant="link"
-                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold"
+                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold text-black"
                             onClick={() => setIsSettingsOpen(true)}
                         >
                             Open Settings
@@ -1499,3 +1499,5 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
+
+    
