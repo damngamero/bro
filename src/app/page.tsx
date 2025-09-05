@@ -84,6 +84,7 @@ export default function RecipeSavvyPage() {
 
   const [generatedRecipes, setGeneratedRecipes] = useState<string[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
+  const [showAllRecipes, setShowAllRecipes] = useState(false);
 
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetailsState>({
@@ -232,6 +233,7 @@ export default function RecipeSavvyPage() {
     setShowFavorites(false);
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
+    setShowAllRecipes(false);
     setRecipeDetails({ isLoading: false, data: null, error: null });
 
     try {
@@ -386,13 +388,16 @@ export default function RecipeSavvyPage() {
   const renderContent = () => {
     switch (currentView) {
       case 'search':
+        const recipesToShow = showAllRecipes
+          ? generatedRecipes
+          : generatedRecipes.slice(0, 4);
         return (
           <motion.div
             key="search-view"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
+            exit={{ opacity: 0, x: '-100%' }}
+            transition={{ duration: 0.3 }}
           >
             <Card className="shadow-lg overflow-hidden">
               <CardHeader>
@@ -564,7 +569,7 @@ export default function RecipeSavvyPage() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(showFavorites ? favorites.map(f => f.name) : generatedRecipes).map(
+                      {(showFavorites ? favorites.map(f => f.name) : recipesToShow).map(
                         recipe => (
                           <motion.div
                             key={recipe}
@@ -573,9 +578,9 @@ export default function RecipeSavvyPage() {
                             transition={{ duration: 0.3 }}
                             whileHover={{ scale: 1.03, y: -5 }}
                             className="relative"
+                            onClick={() => handleSelectRecipe(recipe)}
                           >
                             <Card
-                              onClick={() => handleSelectRecipe(recipe)}
                               className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
                             >
                               <CardTitle className="font-headline text-xl">
@@ -586,6 +591,11 @@ export default function RecipeSavvyPage() {
                         )
                       )}
                     </div>
+                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && (
+                        <div className="mt-6 text-center">
+                            <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
+                        </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -600,7 +610,7 @@ export default function RecipeSavvyPage() {
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '-100%' }}
-            transition={{ duration: 0.5, type: 'spring', stiffness: 50, damping: 15 }}
+            transition={{ duration: 0.3 }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to{' '}
@@ -722,6 +732,7 @@ export default function RecipeSavvyPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
           >
             <Card className="shadow-lg">
               <CardHeader>
@@ -805,7 +816,7 @@ export default function RecipeSavvyPage() {
                 key="enjoy-view"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, type: 'spring' }}
+                transition={{ duration: 0.3, type: 'spring' }}
                 className="text-center"
               >
                 <Card className="shadow-lg p-8">

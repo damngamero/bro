@@ -25,7 +25,7 @@ export type GenerateRecipesFromIngredientsInput = z.infer<
 const GenerateRecipesFromIngredientsOutputSchema = z.object({
   recipes: z
     .array(z.string())
-    .describe('A list of possible recipes that can be made with the given ingredients.'),
+    .describe('A list of 8-10 possible recipes that can be made with the given ingredients.'),
 });
 export type GenerateRecipesFromIngredientsOutput = z.infer<
   typeof GenerateRecipesFromIngredientsOutputSchema
@@ -41,7 +41,7 @@ const prompt = ai.definePrompt({
   name: 'generateRecipesFromIngredientsPrompt',
   input: {schema: GenerateRecipesFromIngredientsInputSchema},
   output: {schema: GenerateRecipesFromIngredientsOutputSchema},
-  prompt: `You are a recipe expert. Given the following list of ingredients, suggest some recipes.
+  prompt: `You are a recipe expert. A user has the following ingredients. Suggest 8-10 diverse recipes they can make. Prioritize recipes that use more of the provided ingredients.
 {{#if halalMode}}Only suggest halal recipes.{{/if}}
 
 Ingredients:
