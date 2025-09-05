@@ -27,8 +27,28 @@ import {
   ArrowLeft,
   Clock,
   BookOpen,
+  Heart,
+  LogOut,
+  BookHeart,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '@/hooks/use-auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  setDoc,
+} from 'firebase/firestore';
 
 type RecipeDetailsState = {
   isLoading: boolean;
@@ -49,10 +69,27 @@ export default function RecipeSavvyPage() {
     data: null,
     error: null,
   });
+  
+  const [favoriteRecipes, setFavoriteRecipes] = useState<string[]>([]);
 
   const { toast } = useToast();
+  const { user, signInWithGoogle, signOut } = useAuth();
   const resultsRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (user) {
+      const fetchFavorites = async () => {
+        const favoritesCol = collection(db, 'users', user.uid, 'favorites');
+        const favoritesSnapshot = await getDocs(favoritesCol);
+        const favs = favoritesSnapshot.docs.map(d => d.id);
+        setFavoriteRecipes(favs);
+      };
+      fetchFavorites();
+    } else {
+      setFavoriteRecipes([]);
+    }
+  }, [user]);
 
   const handleAddIngredient = (e: FormEvent) => {
     e.preventDefault();
@@ -136,6 +173,39 @@ export default function RecipeSavvyPage() {
     },
     [toast]
   );
+  
+  const toggleFavorite = async (recipeName: string, recipeData: RecipeDetailsOutput | null) => {
+    if (!user) {
+      toast({
+        title: 'Please sign in',
+        description: 'You need to be signed in to save favorite recipes.',
+      });
+      return;
+    }
+    
+    const isFavorite = favoriteRecipes.includes(recipeName);
+    const favRef = doc(db, 'users', user.uid, 'favorites', recipeName);
+
+    try {
+      if (isFavorite) {
+        await deleteDoc(favRef);
+        setFavoriteRecipes(favs => favs.filter(fav => fav !== recipeName));
+        toast({ title: 'Removed from favorites!' });
+      } else {
+        if (!recipeData) {
+            const details = await generateRecipeDetails({ recipeName });
+            await setDoc(favRef, { name: recipeName, details });
+        } else {
+            await setDoc(favRef, { name: recipeName, details: recipeData });
+        }
+        setFavoriteRecipes(favs => [...favs, recipeName]);
+        toast({ title: 'Added to favorites!' });
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update favorites.' });
+    }
+  };
 
   const handleBack = () => {
     setSelectedRecipe(null);
@@ -153,20 +223,53 @@ export default function RecipeSavvyPage() {
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null });
+     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center gap-4 text-center">
-          <ChefHat className="h-12 w-12 text-primary" />
-          <div>
-            <h1 className="text-5xl font-headline text-primary-foreground tracking-wider">
-              RecipeSavvy
-            </h1>
-            <p className="text-muted-foreground font-body">
-              Turn your ingredients into delicious meals.
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center gap-4 text-center">
+            <ChefHat className="h-12 w-12 text-primary" />
+            <div>
+              <h1 className="text-5xl font-headline text-primary-foreground tracking-wider">
+                RecipeSavvy
+              </h1>
+              <p className="text-muted-foreground font-body">
+                Turn your ingredients into delicious meals.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {user ? (
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.photoURL!} alt={user.displayName!} />
+                      <AvatarFallback>
+                        {user.displayName?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                   <DropdownMenuItem asChild>
+                    <Link href="/favorites">
+                      <BookHeart className="mr-2 h-4 w-4" />
+                      <span>My Favorites</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={signInWithGoogle}>Sign in with Google</Button>
+            )}
           </div>
         </div>
       </header>
@@ -276,6 +379,7 @@ export default function RecipeSavvyPage() {
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.3 }}
                               whileHover={{ scale: 1.03, y:-5 }}
+                               className="relative"
                             >
                               <Card
                                 onClick={() => handleSelectRecipe(recipe)}
@@ -283,6 +387,19 @@ export default function RecipeSavvyPage() {
                               >
                                 <CardTitle className="font-headline text-xl">{recipe}</CardTitle>
                               </Card>
+                              {user && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2"
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleFavorite(recipe, null)
+                                  }}
+                                >
+                                  <Heart className={cn("h-5 w-5", favoriteRecipes.includes(recipe) ? "text-red-500 fill-current" : "text-muted-foreground")} />
+                                </Button>
+                              )}
                             </motion.div>
                           ))}
                         </div>
@@ -304,9 +421,22 @@ export default function RecipeSavvyPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" /> Back to Recipes
                 </Button>
                 <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="font-headline text-3xl">{selectedRecipe}</CardTitle>
-                     {recipeDetails.data && <CardDescription>{recipeDetails.data.description}</CardDescription>}
+                   <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="font-headline text-3xl">{selectedRecipe}</CardTitle>
+                        {recipeDetails.data && <CardDescription>{recipeDetails.data.description}</CardDescription>}
+                      </div>
+                      {user && selectedRecipe && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleFavorite(selectedRecipe, recipeDetails.data)}
+                        >
+                          <Heart className={cn("h-6 w-6", favoriteRecipes.includes(selectedRecipe) ? "text-red-500 fill-current" : "text-muted-foreground")} />
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {recipeDetails.isLoading && (
@@ -318,7 +448,7 @@ export default function RecipeSavvyPage() {
                     {recipeDetails.error && (
                       <div className="text-destructive text-center py-8">
                         <p>{recipeDetails.error}</p>
-                        <Button onClick={() => handleSelectRecipe(selectedRecipe)} className="mt-4">
+                        <Button onClick={() => handleSelectRecipe(selectedRecipe!)} className="mt-4">
                           Try Again
                         </Button>
                       </div>
