@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -88,6 +89,7 @@ export function VariationDialog({
           variant: "destructive",
           title: "Well, we hit a wall! 🧱",
           description: result.reason || "Couldn't create a variation with these changes.",
+          duration: 8000
         })
       }
     } catch (error) {
