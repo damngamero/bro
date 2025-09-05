@@ -76,7 +76,7 @@ export function ChefHelper({ recipeContext, apiKey }: ChefHelperProps) {
       <SheetTrigger asChild>
         <Button
           variant="default"
-          className="fixed bottom-4 left-4 rounded-full h-14 w-14 shadow-lg z-50 bg-primary hover:bg-primary/90"
+          className="fixed bottom-4 right-4 rounded-full h-14 w-14 shadow-lg z-50 bg-primary hover:bg-primary/90"
         >
           <Bot className="h-6 w-6" />
           <span className="sr-only">Open Chef's Helper</span>
