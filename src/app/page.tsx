@@ -301,10 +301,10 @@ export default function RecipeSavvyPage() {
   }, [ingredients, isHalal, apiKey, toast, ensureApiKey, model]);
 
   useEffect(() => {
-    if ((generatedRecipes.length > 0 || showCookbook) && resultsRef.current) {
+    if (generatedRecipes.length > 0 && resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [generatedRecipes, showCookbook]);
+  }, [generatedRecipes]);
 
   useEffect(() => {
     if (currentView !== 'search' && topRef.current) {
@@ -316,15 +316,13 @@ export default function RecipeSavvyPage() {
     setCurrentView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
-    if (mode === 'ingredients' && (generatedRecipes.length > 0 || showCookbook)) {
+    if (mode === 'ingredients' && generatedRecipes.length > 0) {
       setTimeout(() => {
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
-    } else if (showCookbook) {
-    }
-    else {
+    } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -364,6 +362,8 @@ export default function RecipeSavvyPage() {
 
   const handleGenerateStepDescription = async () => {
     if (!ensureApiKey() || !recipeDetails.data) return;
+
+    if (stepDescriptionsCache[currentStep]) return; // Use cache if available
 
     setStepDescriptionsCache(prev => ({
       ...prev,
@@ -478,6 +478,52 @@ export default function RecipeSavvyPage() {
   const currentStepDescription = stepDescriptionsCache[currentStep];
 
   const renderContent = () => {
+    if (showCookbook) {
+      return (
+        <motion.div
+          key="cookbook-view"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button onClick={() => setShowCookbook(false)} variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
+          </Button>
+          <h2 className="text-3xl font-headline text-center mb-6">
+              My Cookbook
+          </h2>
+
+          {cookbook.length === 0 ? (
+            <p className="text-center text-muted-foreground">
+              You haven't saved any recipes to your cookbook yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {cookbook.map(recipe => (
+                <motion.div
+                  key={recipe.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  whileHover={{ scale: 1.03, y: -5 }}
+                >
+                  <Card
+                    onClick={() => handleSelectRecipe(recipe.name)}
+                    className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
+                  >
+                    <CardTitle className="font-headline text-xl">
+                      {recipe.name}
+                    </CardTitle>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      );
+    }
+    
     switch (currentView) {
       case 'search':
         const recipesToShow = showAllRecipes
@@ -643,7 +689,7 @@ export default function RecipeSavvyPage() {
                     </p>
                   </motion.div>
                 )}
-                {(generatedRecipes.length > 0 || showCookbook) && !isGeneratingRecipes && (
+                {generatedRecipes.length > 0 && !isGeneratingRecipes && (
                   <motion.div
                     key="recipe-list"
                     initial={{ opacity: 0 }}
@@ -651,17 +697,11 @@ export default function RecipeSavvyPage() {
                     transition={{ delay: 0.2 }}
                   >
                     <h2 className="text-3xl font-headline text-center mb-6">
-                      {showCookbook ? 'My Cookbook' : "Here's what you can make"}
+                      {"Here's what you can make"}
                     </h2>
 
-                    {showCookbook && cookbook.length === 0 && (
-                      <p className="text-center text-muted-foreground">
-                        You haven't saved any recipes to your cookbook yet.
-                      </p>
-                    )}
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(showCookbook ? cookbook.map(f => f.name) : recipesToShow).map(
+                      {recipesToShow.map(
                         recipe => (
                           <motion.div
                             key={recipe}
@@ -669,7 +709,6 @@ export default function RecipeSavvyPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
                             whileHover={{ scale: 1.03, y: -5 }}
-                            className="relative"
                           >
                             <Card
                               onClick={() => handleSelectRecipe(recipe)}
@@ -683,7 +722,7 @@ export default function RecipeSavvyPage() {
                         )
                       )}
                     </div>
-                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && !showCookbook && (
+                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && (
                         <div className="mt-6 text-center">
                             <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
                         </div>
@@ -705,8 +744,7 @@ export default function RecipeSavvyPage() {
             transition={{ duration: 0.3 }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to{' '}
-              {showCookbook ? 'Cookbook' : (mode === 'ingredients' && generatedRecipes.length > 0 ? 'Results' : 'Search')}
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to {mode === 'ingredients' && generatedRecipes.length > 0 ? 'Results' : 'Search'}
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -871,7 +909,7 @@ export default function RecipeSavvyPage() {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleGenerateStepDescription} disabled={currentStepDescription?.isLoading}>
+                  <Button onClick={handleGenerateStepDescription} disabled={!!currentStepDescription?.isLoading}>
                     <Eye className="mr-2" />
                     What should it look like?
                   </Button>
