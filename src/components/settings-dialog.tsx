@@ -67,30 +67,32 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="api-key" className="text-right">
-              API Key
-            </Label>
-            <Input 
-                id="api-key" 
-                type="password"
-                value={localApiKey} 
-                onChange={(e) => setLocalApiKey(e.target.value)}
-                className="col-span-3" 
-            />
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="api-key" className="text-right">
+                API Key
+              </Label>
+              <Input 
+                  id="api-key" 
+                  type="password"
+                  value={localApiKey} 
+                  onChange={(e) => setLocalApiKey(e.target.value)}
+                  className="col-span-3" 
+              />
+            </div>
+            <p className="text-xs text-muted-foreground px-1 text-center col-span-4 -mt-2">
+              Get your Google AI API key from{" "}
+              <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="underline"
+              >
+                  Google AI Studio
+              </a>. 
+              Your key is stored only in your browser.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground px-1 text-center col-span-4 -mt-2">
-            Get your Google AI API key from{" "}
-            <a 
-                href="https://aistudio.google.com/app/apikey" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="underline"
-            >
-                Google AI Studio
-            </a>. 
-            Your key is stored only in your browser.
-          </p>
 
           <div className="grid grid-cols-4 items-center gap-4">
              <Label className="text-right">Model</Label>
