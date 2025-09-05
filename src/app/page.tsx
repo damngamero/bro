@@ -58,6 +58,7 @@ import {
   Lightbulb,
   Wand2,
   Dices,
+  Undo2
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -90,6 +91,19 @@ type CookbookRecipe = {
 };
 
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
+
+type PreviousState = {
+  view: View;
+  recipeName: string | null;
+  recipeDetails: RecipeDetailsState;
+  currentStep: number;
+  stepDescriptionsCache: Record<number, StepDescription>;
+  relatedRecipes: {
+    isLoading: boolean;
+    data: string[] | null;
+    error: string | null;
+  };
+};
 
 const MAX_TIPS = 15;
 const MAX_TIPS_IN_30_MIN = 8;
@@ -162,9 +176,11 @@ export default function RecipeSavvyPage() {
   const [shownTips, setShownTips] = useState<string[]>([]);
   const [tipCountLast30Min, setTipCountLast30Min] = useState(0);
   const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [previousState, setPreviousState] = useState<PreviousState | null>(null);
+  const previousStateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -501,12 +517,20 @@ export default function RecipeSavvyPage() {
       topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [currentView]);
+  
+  const clearPreviousState = () => {
+    setPreviousState(null);
+    if(previousStateTimeoutRef.current) {
+      clearTimeout(previousStateTimeoutRef.current);
+    }
+  };
 
   const handleBackToSearch = () => {
     setCurrentView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setShowCookbook(false);
+    clearPreviousState();
     if (generatedRecipes.length > 0) {
       setTimeout(() => {
         if (resultsRef.current) {
@@ -519,6 +543,43 @@ export default function RecipeSavvyPage() {
   };
 
   const handleStartOver = () => {
+    // If we're on a different screen, save the state before navigating home
+    if(currentView !== 'search') {
+      const currentState: PreviousState = {
+        view: currentView,
+        recipeName: selectedRecipe,
+        recipeDetails: recipeDetails,
+        currentStep: currentStep,
+        stepDescriptionsCache: stepDescriptionsCache,
+        relatedRecipes: relatedRecipes
+      };
+      setPreviousState(currentState);
+
+      // Show toast to go back
+      const { id } = toast({
+        duration: 15000,
+        title: "Want to go back?",
+        description: "You can return to where you were.",
+        action: (
+          <Button variant="outline" onClick={() => {
+            handleRestoreState();
+            dismiss(id);
+          }}>
+            <Undo2 className="mr-2" /> Go Back
+          </Button>
+        ),
+      });
+
+      // Clear the saved state after 15 seconds
+      if (previousStateTimeoutRef.current) {
+          clearTimeout(previousStateTimeoutRef.current);
+      }
+      previousStateTimeoutRef.current = setTimeout(() => {
+          setPreviousState(null);
+      }, 15000);
+    }
+
+
     setCurrentView('search');
     setIngredients(['Flour', 'Eggs', 'Sugar']);
     setNewIngredient('');
@@ -531,6 +592,18 @@ export default function RecipeSavvyPage() {
     setStepDescriptionsCache({});
     setRelatedRecipes({ isLoading: false, data: null, error: null });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  const handleRestoreState = () => {
+    if (previousState) {
+      setCurrentView(previousState.view);
+      setSelectedRecipe(previousState.recipeName);
+      setRecipeDetails(previousState.recipeDetails);
+      setCurrentStep(previousState.currentStep);
+      setStepDescriptionsCache(previousState.stepDescriptionsCache);
+      setRelatedRecipes(previousState.relatedRecipes);
+      clearPreviousState();
+    }
   };
 
   const toggleCookbookRecipe = (recipeName: string, recipeDetails: RecipeDetailsOutput) => {
@@ -570,7 +643,7 @@ export default function RecipeSavvyPage() {
       });
       setStepDescriptionsCache(prev => ({
         ...prev,
-        [currentView]: { isLoading: false, data: result.description, error: null }
+        [currentStep]: { isLoading: false, data: result.description, error: null }
       }));
     } catch (error) {
       console.error(error);
@@ -626,6 +699,7 @@ export default function RecipeSavvyPage() {
     setCurrentView('details');
     setCurrentStep(0);
     setStepDescriptionsCache({});
+    clearPreviousState();
   }
 
   useEffect(() => {
@@ -1168,7 +1242,7 @@ export default function RecipeSavvyPage() {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleGenerateStepDescription} disabled={!!currentStepDescription?.isLoading}>
+                  <Button onClick={handleGenerateStepDescription} disabled={!!currentStepDescription?.isLoading || !!currentStepDescription?.data}>
                     <Eye className="mr-2" />
                     What should it look like?
                   </Button>
@@ -1299,7 +1373,8 @@ export default function RecipeSavvyPage() {
                 size="icon"
                 onClick={() => {
                   setShowCookbook(true);
-                  setCurrentView('search'); 
+                  setCurrentView('search');
+                  clearPreviousState();
                 }}
               >
                 <BookHeart />
@@ -1407,5 +1482,3 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
-
-    

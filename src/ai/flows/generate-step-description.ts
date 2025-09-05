@@ -41,7 +41,7 @@ const generateStepDescriptionFlow = ai.defineFlow(
 Recipe: ${recipeName}
 Current Step: "${instruction}"
 
-Provide a concise, two-sentence description of what the food should look like at this stage. Focus on the expected color, texture, and consistency. Be vivid and encouraging.`;
+Provide a concise, two-sentence description of what the food should look like at this stage. Focus specifically on the expected color, texture, and consistency. Be vivid and encouraging.`;
 
     const { output } = await ai.generate({
       prompt,
