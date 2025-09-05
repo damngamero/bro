@@ -9,6 +9,7 @@ import {
 import { generateStepDescription } from '@/ai/flows/generate-step-description';
 import { troubleshootStep } from '@/ai/flows/troubleshoot-step';
 import { generateRelatedRecipes } from '@/ai/flows/generate-related-recipes';
+import { identifyTimedSteps, type IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,6 +50,8 @@ import {
   PartyPopper,
   Repeat,
   Home,
+  Timer,
+  BellOff,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -63,6 +66,7 @@ type RecipeDetailsState = {
   isLoading: boolean;
   data: RecipeDetailsOutput | null;
   error: string | null;
+  timedSteps: IdentifyTimedStepsOutput['timedSteps'];
 };
 
 type FavoriteRecipe = {
@@ -91,6 +95,7 @@ export default function RecipeSavvyPage() {
     isLoading: false,
     data: null,
     error: null,
+    timedSteps: [],
   });
 
   const [favorites, setFavorites] = useState<FavoriteRecipe[]>([]);
@@ -119,6 +124,15 @@ export default function RecipeSavvyPage() {
     data: string[] | null;
     error: string | null;
   }>({ isLoading: false, data: null, error: null });
+
+  const [timer, setTimer] = useState<{
+    isActive: boolean;
+    remaining: number;
+    duration: number;
+  }>({ isActive: false, remaining: 0, duration: 0 });
+  const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+  const alarmRef = useRef<HTMLAudioElement>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
   const { toast } = useToast();
@@ -165,35 +179,42 @@ export default function RecipeSavvyPage() {
   const handleSelectRecipe = useCallback(
     async (recipeName: string) => {
       setSelectedRecipe(recipeName);
-      setRecipeDetails({ isLoading: true, data: null, error: null });
+      setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
       setCurrentStep(0);
       setStepDescription({ isLoading: false, data: null, error: null });
       setCurrentView('details');
 
       const favorite = favorites.find(f => f.name === recipeName);
       if (favorite) {
-        setRecipeDetails({ isLoading: false, data: favorite.details, error: null });
-        return;
+        setRecipeDetails({ isLoading: false, data: favorite.details, error: null, timedSteps: [] }); // Timed steps need fetching
+        // Still fetch timed steps even for favorites
       }
 
       if (!ensureApiKey()) {
-        setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.' });
+        setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.', timedSteps: [] });
         return;
       }
 
       try {
-        const details = await generateRecipeDetails({
+        const details = favorite ? favorite.details : await generateRecipeDetails({
           recipeName,
           halalMode: isHalal,
           apiKey: apiKey!,
         });
-        setRecipeDetails({ isLoading: false, data: details, error: null });
+
+        const timedStepsResult = await identifyTimedSteps({
+            instructions: details.instructions,
+            apiKey: apiKey!,
+        });
+        
+        setRecipeDetails({ isLoading: false, data: details, error: null, timedSteps: timedStepsResult.timedSteps });
       } catch (error) {
         console.error(error);
         setRecipeDetails({
           isLoading: false,
           data: null,
           error: 'Failed to load recipe details.',
+          timedSteps: [],
         });
         toast({
           variant: 'destructive',
@@ -234,7 +255,7 @@ export default function RecipeSavvyPage() {
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowAllRecipes(false);
-    setRecipeDetails({ isLoading: false, data: null, error: null });
+    setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
 
     try {
       const result = await generateRecipesFromIngredients({
@@ -277,7 +298,7 @@ export default function RecipeSavvyPage() {
   const handleBackToSearch = () => {
     setCurrentView('search');
     setSelectedRecipe(null);
-    setRecipeDetails({ isLoading: false, data: null, error: null });
+    setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     // In recipe mode, going back should not scroll to results, but to the top.
     if (mode === 'ingredients' && (generatedRecipes.length > 0 || showFavorites)) {
       setTimeout(() => {
@@ -298,7 +319,7 @@ export default function RecipeSavvyPage() {
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowFavorites(false);
-    setRecipeDetails({ isLoading: false, data: null, error: null });
+    setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setCurrentStep(0);
     setStepDescription({ isLoading: false, data: null, error: null });
     setRelatedRecipes({ isLoading: false, data: null, error: null });
@@ -384,6 +405,46 @@ export default function RecipeSavvyPage() {
     setCurrentStep(0);
     setStepDescription({isLoading: false, data: null, error: null});
   }
+
+  // Timer Controls
+  useEffect(() => {
+    if (timer.isActive && timer.remaining > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimer(t => ({ ...t, remaining: t.remaining - 1 }));
+      }, 1000);
+    } else if (timer.isActive && timer.remaining === 0) {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      setIsAlarmPlaying(true);
+      alarmRef.current?.play();
+    }
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [timer.isActive, timer.remaining]);
+
+  const startTimer = (durationInMinutes: number) => {
+    setTimer({
+      isActive: true,
+      duration: durationInMinutes * 60,
+      remaining: durationInMinutes * 60,
+    });
+  };
+
+  const stopAlarm = () => {
+    setIsAlarmPlaying(false);
+    alarmRef.current?.pause();
+    if(alarmRef.current) alarmRef.current.currentTime = 0;
+    setTimer({ isActive: false, remaining: 0, duration: 0 }); // Reset timer
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const currentStepTimedInfo = recipeDetails.timedSteps.find(ts => ts.step === currentStep + 1);
+
 
   const renderContent = () => {
     switch (currentView) {
@@ -736,13 +797,22 @@ export default function RecipeSavvyPage() {
           >
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="font-headline text-3xl">
-                  {selectedRecipe}
-                </CardTitle>
-                <CardDescription>
-                  Step {currentStep + 1} of{' '}
-                  {recipeDetails.data!.instructions.length}
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle className="font-headline text-3xl">
+                        {selectedRecipe}
+                        </CardTitle>
+                        <CardDescription>
+                        Step {currentStep + 1} of{' '}
+                        {recipeDetails.data!.instructions.length}
+                        </CardDescription>
+                    </div>
+                    {timer.isActive && (
+                        <div className="text-2xl font-mono bg-muted px-4 py-2 rounded-lg">
+                            {formatTime(timer.remaining)}
+                        </div>
+                    )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-lg font-body leading-relaxed">
@@ -785,11 +855,26 @@ export default function RecipeSavvyPage() {
                     <AlertTriangle className="mr-2" />
                     Something's wrong?
                   </Button>
+                   {currentStepTimedInfo && !timer.isActive && (
+                    <Button onClick={() => startTimer(currentStepTimedInfo.durationInMinutes)}>
+                        <Timer className="mr-2" />
+                        Start Timer ({currentStepTimedInfo.durationInMinutes} min)
+                    </Button>
+                    )}
+                    {isAlarmPlaying && (
+                        <Button onClick={stopAlarm} variant="destructive">
+                            <BellOff className="mr-2" />
+                            Stop Alarm
+                        </Button>
+                    )}
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
                 <Button
-                  onClick={() => setCurrentStep(s => s - 1)}
+                  onClick={() => {
+                    setCurrentStep(s => s - 1)
+                    setStepDescription({isLoading: false, data: null, error: null});
+                  }}
                   disabled={currentStep === 0}
                 >
                   <ChevronLeft className="mr-2" /> Previous Step
@@ -920,6 +1005,8 @@ export default function RecipeSavvyPage() {
           <p>Built by TheVibecoder</p>
         </footer>
       </div>
+
+      <audio ref={alarmRef} src="/alarm.mp3" loop />
 
       <SettingsDialog
         isOpen={isSettingsOpen}
