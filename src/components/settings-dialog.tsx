@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Moon, Sun } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
+import { cn } from "@/lib/utils"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -33,11 +34,13 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
   const { setTheme, theme } = useTheme()
   const [localApiKey, setLocalApiKey] = useState(apiKey || "");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     setLocalApiKey(apiKey || "");
-  }, [apiKey]);
+    setIsApiKeyMissing(!apiKey);
+  }, [apiKey, isOpen]);
   
   const handleSave = () => {
     if (localApiKey) {
@@ -79,7 +82,10 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
                     type={showApiKey ? "text" : "password"}
                     value={localApiKey} 
                     onChange={(e) => setLocalApiKey(e.target.value)}
-                    className="pr-10"
+                    className={cn(
+                      "pr-10",
+                      isApiKeyMissing && "ring-2 ring-offset-2 ring-destructive focus-visible:ring-destructive"
+                    )}
                 />
                 <Button 
                   variant="ghost" 

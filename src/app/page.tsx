@@ -107,8 +107,7 @@ type PreviousState = {
 
 const MAX_TIPS = 15;
 const MAX_TIPS_IN_30_MIN = 8;
-const MIN_TIP_INTERVAL_MS = 60 * 1000; // 1 minute
-const MAX_TIP_INTERVAL_MS = 8 * 60 * 1000; // 8 minutes
+const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
 export default function RecipeSavvyPage() {
   const [currentView, setCurrentView] = useState<View>('search');
@@ -192,11 +191,22 @@ export default function RecipeSavvyPage() {
         return;
     }
     
-    const timeoutMs = Math.random() * (MAX_TIP_INTERVAL_MS - MIN_TIP_INTERVAL_MS) + MIN_TIP_INTERVAL_MS;
-
     tipTimeoutRef.current = setTimeout(async () => {
         try {
-            const { tip } = await generateCookingTip({ previousTips: shownTips, apiKey, model });
+            const context: any = { view: currentView };
+            if (currentView === 'cooking' && selectedRecipe && recipeDetails.data) {
+                context.recipeName = selectedRecipe;
+                context.step = recipeDetails.data.instructions[currentStep];
+            } else if (currentView === 'details' && selectedRecipe) {
+                context.recipeName = selectedRecipe;
+            }
+
+            const { tip } = await generateCookingTip({ 
+                previousTips: shownTips, 
+                context,
+                apiKey, 
+                model 
+            });
             setShownTips(prev => [...prev, tip]);
             setTipCountLast30Min(prev => prev + 1);
 
@@ -215,9 +225,9 @@ export default function RecipeSavvyPage() {
         } finally {
             scheduleNextTip();
         }
-    }, timeoutMs);
+    }, TIP_INTERVAL_MS);
 
-  }, [apiKey, model, shownTips, tipCountLast30Min, toast]);
+  }, [apiKey, model, shownTips, tipCountLast30Min, toast, currentView, selectedRecipe, recipeDetails.data, currentStep]);
 
   useEffect(() => {
     // Reset the 30-minute tip counter every 30 minutes
@@ -1082,32 +1092,22 @@ export default function RecipeSavvyPage() {
                     )}
                   </div>
                   {recipeDetails.data && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsVariationOpen(true)}
-                      >
-                          <Wand2 />
-                          <span className="sr-only">Make a variation</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          toggleCookbookRecipe(selectedRecipe!, recipeDetails.data!)
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        toggleCookbookRecipe(selectedRecipe!, recipeDetails.data!)
+                      }
+                    >
+                      <Heart
+                        className={
+                          isInCookbook(selectedRecipe!)
+                            ? 'fill-red-500 text-red-500'
+                            : ''
                         }
-                      >
-                        <Heart
-                          className={
-                            isInCookbook(selectedRecipe!)
-                              ? 'fill-red-500 text-red-500'
-                              : ''
-                          }
-                        />
-                         <span className="sr-only">Add to cookbook</span>
-                      </Button>
-                    </div>
+                      />
+                       <span className="sr-only">Add to cookbook</span>
+                    </Button>
                   )}
                 </div>
               </CardHeader>
@@ -1133,19 +1133,28 @@ export default function RecipeSavvyPage() {
                 )}
                 {recipeDetails.data && (
                   <div className="space-y-6">
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <div>
-                          <strong>Prep:</strong> {recipeDetails.data.prepTime}
+                    <div className="flex justify-between items-center">
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <div>
+                              <strong>Prep:</strong> {recipeDetails.data.prepTime}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <div>
+                              <strong>Cook:</strong> {recipeDetails.data.cookTime}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <div>
-                          <strong>Cook:</strong> {recipeDetails.data.cookTime}
-                        </div>
-                      </div>
+                         <Button
+                          variant="outline"
+                          onClick={() => setIsVariationOpen(true)}
+                        >
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Make a variation
+                        </Button>
                     </div>
 
                     <div>
