@@ -30,11 +30,13 @@ import {
   Heart,
   Settings,
   BookHeart,
+  MessageSquare,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { RecipeChatbot } from '@/components/recipe-chatbot';
 
 type RecipeDetailsState = {
   isLoading: boolean;
@@ -204,7 +206,7 @@ export default function RecipeSavvyPage() {
   };
   
   const handleStartOver = () => {
-    setIngredients([]);
+    setIngredients(['Flour', 'Eggs', 'Sugar']);
     setNewIngredient('');
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
@@ -330,7 +332,7 @@ export default function RecipeSavvyPage() {
                       )}
                       Find Recipes
                     </Button>
-                    {ingredients.length > 0 && 
+                    {(ingredients.length > 0 || generatedRecipes.length > 0) &&
                       <Button onClick={handleStartOver} variant="outline" className="w-full sm:w-auto">
                         Start Over
                       </Button>
@@ -470,6 +472,16 @@ export default function RecipeSavvyPage() {
           </AnimatePresence>
         </div>
       </main>
+      
+      {selectedRecipe && recipeDetails.data && apiKey && (
+        <RecipeChatbot 
+            recipe={{
+                name: selectedRecipe,
+                ...recipeDetails.data,
+            }} 
+            apiKey={apiKey}
+        />
+      )}
       
       <SettingsDialog 
         isOpen={isSettingsOpen}
