@@ -33,7 +33,7 @@ const generateRelatedRecipesFlow = ai.defineFlow(
     outputSchema: GenerateRelatedRecipesOutputSchema,
   },
   async ({ recipeName, apiKey }) => {
-    const prompt = `You are a recipe expert. A user just finished cooking "{{recipeName}}". Suggest 3-4 other recipes they might enjoy.`;
+    const prompt = `You are a recipe expert. A user just finished cooking "{{recipeName}}". Suggest 3-4 other recipes they might enjoy. The suggestions should be related by cuisine, main ingredients, or cooking style.`;
 
     const { output } = await ai.generate({
       prompt,

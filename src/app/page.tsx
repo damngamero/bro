@@ -163,19 +163,23 @@ export default function RecipeSavvyPage() {
 
   const handleSelectRecipe = useCallback(
     async (recipeName: string) => {
+      setSelectedRecipe(recipeName);
+      setRecipeDetails({ isLoading: true, data: null, error: null });
+      setCurrentStep(0);
+      setStepDescription({ isLoading: false, data: null, error: null });
+      setCurrentView('details');
+
       const favorite = favorites.find(f => f.name === recipeName);
       if (favorite) {
-        setSelectedRecipe(recipeName);
         setRecipeDetails({ isLoading: false, data: favorite.details, error: null });
-        setCurrentView('details');
         return;
       }
 
-      if (!ensureApiKey()) return;
+      if (!ensureApiKey()) {
+        setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.' });
+        return;
+      }
 
-      setSelectedRecipe(recipeName);
-      setCurrentView('details');
-      setRecipeDetails({ isLoading: true, data: null, error: null });
       try {
         const details = await generateRecipeDetails({
           recipeName,
