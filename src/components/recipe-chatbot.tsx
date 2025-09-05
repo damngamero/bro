@@ -94,16 +94,16 @@ export function RecipeChatbot({ recipe, apiKey }: RecipeChatbotProps) {
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button
-          className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg"
+          className="fixed bottom-6 left-6 h-16 w-16 rounded-full shadow-lg"
           size="icon"
         >
           <MessageSquare className="h-8 w-8" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col">
+      <SheetContent side="left" className="flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Bot /> Culinary Assistant
+            <Bot /> Chef's Helper
           </SheetTitle>
           <SheetDescription>
             Ask me anything about the terms in this recipe!
