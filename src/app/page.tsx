@@ -304,7 +304,7 @@ export default function RecipeSavvyPage() {
     try {
       const { recipes } = await generateRandomRecipes({
         count: 2,
-        apiKey: apiKey!,
+        apiKey: apiKey ?? undefined,
         model,
       });
       setSuggestedRecipes(recipes);
