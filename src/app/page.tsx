@@ -35,6 +35,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type RecipeDetailsState = {
   isLoading: boolean;
@@ -47,9 +48,13 @@ type FavoriteRecipe = {
   details: RecipeDetailsOutput;
 }
 
+type Mode = 'ingredients' | 'recipe';
+
 export default function RecipeSavvyPage() {
+  const [mode, setMode] = useState<Mode>('ingredients');
   const [ingredients, setIngredients] = useState<string[]>(['Flour', 'Eggs', 'Sugar']);
   const [newIngredient, setNewIngredient] = useState('');
+  const [recipeName, setRecipeName] = useState('');
   const [isHalal, setIsHalal] = useState(false);
 
   const [generatedRecipes, setGeneratedRecipes] = useState<string[]>([]);
@@ -95,17 +100,22 @@ export default function RecipeSavvyPage() {
   const handleRemoveIngredient = (ingredientToRemove: string) => {
     setIngredients(ingredients.filter(i => i !== ingredientToRemove));
   };
-
-  const handleGenerateRecipes = useCallback(async () => {
-    if (!apiKey) {
+  
+  const ensureApiKey = useCallback(() => {
+     if (!apiKey) {
       toast({
         variant: 'destructive',
         title: 'API Key Missing',
         description: 'Please add your Google AI API key in the settings.',
       });
       setIsSettingsOpen(true);
-      return;
+      return false;
     }
+    return true;
+  }, [apiKey, toast]);
+
+  const handleGenerateRecipes = useCallback(async () => {
+    if (!ensureApiKey()) return;
     if (ingredients.length === 0) {
       toast({
         variant: 'destructive',
@@ -121,7 +131,7 @@ export default function RecipeSavvyPage() {
     setRecipeDetails({ isLoading: false, data: null, error: null });
 
     try {
-      const result = await generateRecipesFromIngredients({ ingredients, halalMode: isHalal, apiKey });
+      const result = await generateRecipesFromIngredients({ ingredients, halalMode: isHalal, apiKey: apiKey! });
       if (result.recipes.length === 0) {
         toast({
           title: 'No Recipes Found',
@@ -139,8 +149,21 @@ export default function RecipeSavvyPage() {
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, apiKey, toast]);
+  }, [ingredients, isHalal, apiKey, toast, ensureApiKey]);
   
+  const handleGetRecipe = useCallback(async () => {
+    if (!ensureApiKey()) return;
+    if (!recipeName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'No Recipe Name',
+        description: 'Please enter the name of a recipe.',
+      });
+      return;
+    }
+    handleSelectRecipe(recipeName);
+  }, [recipeName, ensureApiKey, toast]);
+
   useEffect(() => {
     if ((generatedRecipes.length > 0 || showFavorites) && resultsRef.current) {
         resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -162,19 +185,12 @@ export default function RecipeSavvyPage() {
         return;
       }
       
-      if (!apiKey) {
-        toast({
-          variant: 'destructive',
-          title: 'API Key Missing',
-          description: 'Please add your Google AI API key in the settings.',
-        });
-        setIsSettingsOpen(true);
-        return;
-      }
+      if (!ensureApiKey()) return;
+
       setSelectedRecipe(recipeName);
       setRecipeDetails({ isLoading: true, data: null, error: null });
       try {
-        const details = await generateRecipeDetails({ recipeName, halalMode: isHalal, apiKey });
+        const details = await generateRecipeDetails({ recipeName, halalMode: isHalal, apiKey: apiKey! });
         setRecipeDetails({ isLoading: false, data: details, error: null });
       } catch (error) {
         console.error(error);
@@ -190,22 +206,28 @@ export default function RecipeSavvyPage() {
         });
       }
     },
-    [apiKey, isHalal, toast, favorites]
+    [apiKey, isHalal, toast, favorites, ensureApiKey]
   );
   
   const handleBack = () => {
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null });
-    setTimeout(() => {
-         if(resultsRef.current) {
-            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-         }
-    }, 100);
+    // In recipe mode, going back should not scroll to results, but to the top.
+    if (mode === 'ingredients') {
+        setTimeout(() => {
+             if(resultsRef.current) {
+                resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+             }
+        }, 100);
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   
   const handleStartOver = () => {
     setIngredients(['Flour', 'Eggs', 'Sugar']);
     setNewIngredient('');
+    setRecipeName('');
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowFavorites(false);
@@ -276,66 +298,116 @@ export default function RecipeSavvyPage() {
                   <Card className="shadow-lg overflow-hidden">
                     <CardHeader>
                       <CardTitle className="font-headline text-2xl">
-                        What's in your pantry?
+                         Find your next meal
                       </CardTitle>
                       <CardDescription>
-                        Add your ingredients and we'll find recipes for you.
+                        Switch between finding recipes by ingredients or by name.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <form onSubmit={handleAddIngredient} className="flex gap-2 mb-4">
-                        <Input
-                          type="text"
-                          value={newIngredient}
-                          onChange={e => setNewIngredient(e.target.value)}
-                          placeholder="e.g., Chicken breast"
-                          className="flex-grow"
-                        />
-                        <Button type="submit" size="icon" aria-label="Add ingredient">
-                          <Plus />
-                        </Button>
-                      </form>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {ingredients.map(ingredient => (
-                          <Badge
-                            key={ingredient}
-                            variant="secondary"
-                            className="py-1 px-3 text-sm"
-                          >
-                            {ingredient}
-                            <button
-                              onClick={() => handleRemoveIngredient(ingredient)}
-                              className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                              aria-label={`Remove ${ingredient}`}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                       <div className="flex items-center space-x-2">
+                      <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="ingredients">By Ingredients</TabsTrigger>
+                          <TabsTrigger value="recipe">By Recipe Name</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="ingredients">
+                           <Card className="border-0 shadow-none">
+                             <CardHeader className="px-1 pt-4">
+                                <CardTitle className="text-xl">What's in your pantry?</CardTitle>
+                                <CardDescription>Add your ingredients and we'll find recipes for you.</CardDescription>
+                             </CardHeader>
+                             <CardContent className="px-1">
+                                <form onSubmit={handleAddIngredient} className="flex gap-2 mb-4">
+                                  <Input
+                                    type="text"
+                                    value={newIngredient}
+                                    onChange={e => setNewIngredient(e.target.value)}
+                                    placeholder="e.g., Chicken breast"
+                                    className="flex-grow"
+                                  />
+                                  <Button type="submit" size="icon" aria-label="Add ingredient">
+                                    <Plus />
+                                  </Button>
+                                </form>
+                                <div className="flex flex-wrap gap-2">
+                                  {ingredients.map(ingredient => (
+                                    <Badge
+                                      key={ingredient}
+                                      variant="secondary"
+                                      className="py-1 px-3 text-sm"
+                                    >
+                                      {ingredient}
+                                      <button
+                                        onClick={() => handleRemoveIngredient(ingredient)}
+                                        className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                                        aria-label={`Remove ${ingredient}`}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                             </CardContent>
+                           </Card>
+                        </TabsContent>
+                        <TabsContent value="recipe">
+                           <Card className="border-0 shadow-none">
+                             <CardHeader className="px-1 pt-4">
+                                <CardTitle className="text-xl">What do you want to cook?</CardTitle>
+                                <CardDescription>Enter the name of the recipe you'd like to find.</CardDescription>
+                             </CardHeader>
+                             <CardContent className="px-1">
+                                <form onSubmit={(e) => { e.preventDefault(); handleGetRecipe(); }} className="flex gap-2">
+                                  <Input
+                                    type="text"
+                                    value={recipeName}
+                                    onChange={e => setRecipeName(e.target.value)}
+                                    placeholder="e.g., Chicken Alfredo"
+                                    className="flex-grow"
+                                  />
+                                </form>
+                             </CardContent>
+                            </Card>
+                        </TabsContent>
+                      </Tabs>
+                      <div className="flex items-center space-x-2 mt-4">
                         <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} />
                         <Label htmlFor="halal-mode">Halal Mode</Label>
                       </div>
                     </CardContent>
                     <CardFooter className="flex-col sm:flex-row gap-2">
-                      <Button
-                        onClick={handleGenerateRecipes}
-                        disabled={isGeneratingRecipes || ingredients.length === 0}
-                        className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
-                      >
-                        {isGeneratingRecipes ? (
-                          <LoaderCircle className="animate-spin mr-2" />
+                        {mode === 'ingredients' ? (
+                          <Button
+                            onClick={handleGenerateRecipes}
+                            disabled={isGeneratingRecipes || ingredients.length === 0}
+                            className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
+                          >
+                            {isGeneratingRecipes ? (
+                              <LoaderCircle className="animate-spin mr-2" />
+                            ) : (
+                              <Sparkles className="mr-2" />
+                            )}
+                            Find Recipes
+                          </Button>
                         ) : (
-                          <Sparkles className="mr-2" />
+                          <Button
+                            onClick={handleGetRecipe}
+                            disabled={recipeDetails.isLoading || !recipeName}
+                            className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
+                          >
+                            {recipeDetails.isLoading ? (
+                              <LoaderCircle className="animate-spin mr-2" />
+                            ) : (
+                              <Sparkles className="mr-2" />
+                            )}
+                            Get Recipe
+                          </Button>
                         )}
-                        Find Recipes
-                      </Button>
-                      {(ingredients.length > 0 || generatedRecipes.length > 0) &&
-                        <Button onClick={handleStartOver} variant="outline" className="w-full sm:w-auto">
-                          Start Over
-                        </Button>
-                      }
+                        {(ingredients.length > 0 || generatedRecipes.length > 0 || recipeName) &&
+                          <Button onClick={handleStartOver} variant="outline" className="w-full sm:w-auto">
+                            Start Over
+                          </Button>
+                        }
                     </CardFooter>
                   </Card>
 
@@ -402,7 +474,7 @@ export default function RecipeSavvyPage() {
                   transition={{ duration: 0.5, type: 'spring', stiffness: 50, damping: 15 }}
                 >
                   <Button onClick={handleBack} variant="ghost" className="mb-4">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Results
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to {mode === 'ingredients' ? 'Results' : 'Search'}
                   </Button>
                   <Card className="shadow-lg">
                      <CardHeader>
