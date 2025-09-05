@@ -113,6 +113,39 @@ export default function RecipeSavvyPage() {
     }
     return true;
   }, [apiKey, toast]);
+  
+  const handleSelectRecipe = useCallback(
+    async (recipeName: string) => {
+      const favorite = favorites.find(f => f.name === recipeName);
+      if (favorite) {
+        setSelectedRecipe(recipeName);
+        setRecipeDetails({ isLoading: false, data: favorite.details, error: null });
+        return;
+      }
+      
+      if (!ensureApiKey()) return;
+
+      setSelectedRecipe(recipeName);
+      setRecipeDetails({ isLoading: true, data: null, error: null });
+      try {
+        const details = await generateRecipeDetails({ recipeName, halalMode: isHalal, apiKey: apiKey! });
+        setRecipeDetails({ isLoading: false, data: details, error: null });
+      } catch (error) {
+        console.error(error);
+        setRecipeDetails({
+          isLoading: false,
+          data: null,
+          error: 'Failed to load recipe details.',
+        });
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load recipe details. Please try again.',
+        });
+      }
+    },
+    [apiKey, isHalal, toast, favorites, ensureApiKey]
+  );
 
   const handleGenerateRecipes = useCallback(async () => {
     if (!ensureApiKey()) return;
@@ -162,7 +195,7 @@ export default function RecipeSavvyPage() {
       return;
     }
     handleSelectRecipe(recipeName);
-  }, [recipeName, ensureApiKey, toast]);
+  }, [recipeName, ensureApiKey, toast, handleSelectRecipe]);
 
   useEffect(() => {
     if ((generatedRecipes.length > 0 || showFavorites) && resultsRef.current) {
@@ -176,39 +209,6 @@ export default function RecipeSavvyPage() {
     }
   }, [selectedRecipe]);
 
-  const handleSelectRecipe = useCallback(
-    async (recipeName: string) => {
-      const favorite = favorites.find(f => f.name === recipeName);
-      if (favorite) {
-        setSelectedRecipe(recipeName);
-        setRecipeDetails({ isLoading: false, data: favorite.details, error: null });
-        return;
-      }
-      
-      if (!ensureApiKey()) return;
-
-      setSelectedRecipe(recipeName);
-      setRecipeDetails({ isLoading: true, data: null, error: null });
-      try {
-        const details = await generateRecipeDetails({ recipeName, halalMode: isHalal, apiKey: apiKey! });
-        setRecipeDetails({ isLoading: false, data: details, error: null });
-      } catch (error) {
-        console.error(error);
-        setRecipeDetails({
-          isLoading: false,
-          data: null,
-          error: 'Failed to load recipe details.',
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load recipe details. Please try again.',
-        });
-      }
-    },
-    [apiKey, isHalal, toast, favorites, ensureApiKey]
-  );
-  
   const handleBack = () => {
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null });
@@ -545,7 +545,7 @@ export default function RecipeSavvyPage() {
         </main>
 
         <footer className="text-center py-4 text-muted-foreground text-sm">
-          <p>Built with ❤️ by You</p>
+          <p>Built by TheVibecoder</p>
         </footer>
       </div>
 
