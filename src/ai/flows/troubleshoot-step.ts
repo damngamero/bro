@@ -6,12 +6,14 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import {ModelId} from '@genkit-ai/googleai';
 
 const TroubleshootStepInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
   instruction: z.string().describe('The cooking instruction where the user is having trouble.'),
   problem: z.string().describe("The user's description of what's going wrong."),
   apiKey: z.string().optional().describe('Google AI API key.'),
+  model: z.string().optional().describe('The model to use for generation.'),
 });
 
 export type TroubleshootStepInput = z.infer<typeof TroubleshootStepInputSchema>;
@@ -34,7 +36,7 @@ const troubleshootStepFlow = ai.defineFlow(
     inputSchema: TroubleshootStepInputSchema,
     outputSchema: TroubleshootStepOutputSchema,
   },
-  async ({ recipeName, instruction, problem, apiKey }) => {
+  async ({ recipeName, instruction, problem, apiKey, model }) => {
     const prompt = `You are an expert chef and cooking instructor. A user is having trouble making a recipe and needs help.
 
 Recipe: ${recipeName}
@@ -45,6 +47,7 @@ Provide clear, concise, and encouraging advice to help them fix the problem and 
 
     const {output} = await ai.generate({
       prompt,
+      model: model as ModelId,
       output: { schema: TroubleshootStepOutputSchema },
       config: apiKey ? { apiKey } : undefined,
     });

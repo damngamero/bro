@@ -62,6 +62,14 @@ import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 
+type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
+
+type StepDescription = {
+  isLoading: boolean;
+  data: string | null;
+  error: string | null;
+}
+
 type RecipeDetailsState = {
   isLoading: boolean;
   data: RecipeDetailsOutput | null;
@@ -103,13 +111,10 @@ export default function RecipeSavvyPage() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [model, setModel] = useState<ModelId>('googleai/gemini-2.5-pro');
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [stepDescription, setStepDescription] = useState<{
-    isLoading: boolean;
-    data: string | null;
-    error: string | null;
-  }>({ isLoading: false, data: null, error: null });
+  const [stepDescriptionsCache, setStepDescriptionsCache] = useState<Record<number, StepDescription>>({});
 
   const [isTroubleshootDialogOpen, setIsTroubleshootDialogOpen] = useState(false);
   const [troubleshootQuery, setTroubleshootQuery] = useState('');
@@ -144,12 +149,21 @@ export default function RecipeSavvyPage() {
     if (storedApiKey) {
       setApiKey(storedApiKey);
     }
+    const storedModel = localStorage.getItem('geminiModel') as ModelId;
+    if (storedModel) {
+      setModel(storedModel);
+    }
 
     const storedCookbook = localStorage.getItem('cookbookRecipes');
     if (storedCookbook) {
       setCookbook(JSON.parse(storedCookbook));
     }
   }, []);
+
+  const handleAddModel = (newModel: ModelId) => {
+    setModel(newModel);
+    localStorage.setItem('geminiModel', newModel);
+  }
 
   const handleAddIngredient = (e: FormEvent) => {
     e.preventDefault();
@@ -181,14 +195,13 @@ export default function RecipeSavvyPage() {
       setSelectedRecipe(recipeName);
       setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
       setCurrentStep(0);
-      setStepDescription({ isLoading: false, data: null, error: null });
+      setStepDescriptionsCache({});
       setCurrentView('details');
-      setShowCookbook(false); // Hide cookbook when a recipe is selected
+      setShowCookbook(false); 
 
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
       if (cookbookRecipe) {
-        setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: [] }); // Timed steps need fetching
-        // Still fetch timed steps even for cookbook recipes
+        setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: [] }); 
       }
 
       if (!ensureApiKey()) {
@@ -201,11 +214,13 @@ export default function RecipeSavvyPage() {
           recipeName,
           halalMode: isHalal,
           apiKey: apiKey!,
+          model,
         });
 
         const timedStepsResult = await identifyTimedSteps({
             instructions: details.instructions,
             apiKey: apiKey!,
+            model,
         });
         
         setRecipeDetails({ isLoading: false, data: details, error: null, timedSteps: timedStepsResult.timedSteps });
@@ -224,7 +239,7 @@ export default function RecipeSavvyPage() {
         });
       }
     },
-    [apiKey, isHalal, toast, cookbook, ensureApiKey]
+    [apiKey, isHalal, toast, cookbook, ensureApiKey, model]
   );
   
   const handleGetRecipe = useCallback(async () => {
@@ -263,6 +278,7 @@ export default function RecipeSavvyPage() {
         ingredients,
         halalMode: isHalal,
         apiKey: apiKey!,
+        model,
       });
       if (result.recipes.length === 0) {
         toast({
@@ -282,7 +298,7 @@ export default function RecipeSavvyPage() {
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, apiKey, toast, ensureApiKey]);
+  }, [ingredients, isHalal, apiKey, toast, ensureApiKey, model]);
 
   useEffect(() => {
     if ((generatedRecipes.length > 0 || showCookbook) && resultsRef.current) {
@@ -300,7 +316,6 @@ export default function RecipeSavvyPage() {
     setCurrentView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
-    // In recipe mode, going back should not scroll to results, but to the top.
     if (mode === 'ingredients' && (generatedRecipes.length > 0 || showCookbook)) {
       setTimeout(() => {
         if (resultsRef.current) {
@@ -308,7 +323,6 @@ export default function RecipeSavvyPage() {
         }
       }, 100);
     } else if (showCookbook) {
-       // do nothing, stay on cookbook view
     }
     else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -325,7 +339,7 @@ export default function RecipeSavvyPage() {
     setShowCookbook(false);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setCurrentStep(0);
-    setStepDescription({ isLoading: false, data: null, error: null });
+    setStepDescriptionsCache({});
     setRelatedRecipes({ isLoading: false, data: null, error: null });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -350,17 +364,29 @@ export default function RecipeSavvyPage() {
 
   const handleGenerateStepDescription = async () => {
     if (!ensureApiKey() || !recipeDetails.data) return;
-    setStepDescription({ isLoading: true, data: null, error: null });
+
+    setStepDescriptionsCache(prev => ({
+      ...prev,
+      [currentStep]: { isLoading: true, data: null, error: null }
+    }));
+
     try {
       const result = await generateStepDescription({
         recipeName: selectedRecipe!,
         instruction: recipeDetails.data.instructions[currentStep],
         apiKey: apiKey!,
+        model,
       });
-      setStepDescription({ isLoading: false, data: result.description, error: null });
+      setStepDescriptionsCache(prev => ({
+        ...prev,
+        [currentStep]: { isLoading: false, data: result.description, error: null }
+      }));
     } catch (error) {
       console.error(error);
-      setStepDescription({ isLoading: false, data: null, error: 'Failed to get description.' });
+      setStepDescriptionsCache(prev => ({
+        ...prev,
+        [currentStep]: { isLoading: false, data: null, error: 'Failed to get description.' }
+      }));
       toast({
         variant: 'destructive',
         title: 'Description Failed',
@@ -378,6 +404,7 @@ export default function RecipeSavvyPage() {
         instruction: recipeDetails.data.instructions[currentStep],
         problem: troubleshootQuery,
         apiKey: apiKey!,
+        model,
       });
       setTroubleshootingAdvice({ isLoading: false, data: result.advice, error: null });
     } catch (error) {
@@ -396,7 +423,7 @@ export default function RecipeSavvyPage() {
     if (!ensureApiKey() || !selectedRecipe) return;
     setRelatedRecipes({ isLoading: true, data: null, error: null });
     try {
-      const result = await generateRelatedRecipes({ recipeName: selectedRecipe, apiKey: apiKey! });
+      const result = await generateRelatedRecipes({ recipeName: selectedRecipe, apiKey: apiKey!, model });
       setRelatedRecipes({ isLoading: false, data: result.recipes, error: null });
     } catch(error) {
       console.error(error);
@@ -407,7 +434,7 @@ export default function RecipeSavvyPage() {
   const handleRemake = () => {
     setCurrentView('details');
     setCurrentStep(0);
-    setStepDescription({isLoading: false, data: null, error: null});
+    setStepDescriptionsCache({});
   }
 
   // Timer Controls
@@ -448,7 +475,7 @@ export default function RecipeSavvyPage() {
   };
 
   const currentStepTimedInfo = recipeDetails.timedSteps.find(ts => ts.step === currentStep + 1);
-
+  const currentStepDescription = stepDescriptionsCache[currentStep];
 
   const renderContent = () => {
     switch (currentView) {
@@ -643,9 +670,9 @@ export default function RecipeSavvyPage() {
                             transition={{ duration: 0.3 }}
                             whileHover={{ scale: 1.03, y: -5 }}
                             className="relative"
-                            onClick={() => handleSelectRecipe(recipe)}
                           >
                             <Card
+                              onClick={() => handleSelectRecipe(recipe)}
                               className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
                             >
                               <CardTitle className="font-headline text-xl">
@@ -823,28 +850,28 @@ export default function RecipeSavvyPage() {
                   {recipeDetails.data!.instructions[currentStep]}
                 </p>
 
-                {stepDescription.isLoading && (
+                {currentStepDescription?.isLoading && (
                   <div className="flex items-center justify-center h-24 bg-muted rounded-lg">
                     <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}
 
-                {stepDescription.error && (
-                    <div className="text-destructive text-center py-4">{stepDescription.error}</div>
+                {currentStepDescription?.error && (
+                    <div className="text-destructive text-center py-4">{currentStepDescription.error}</div>
                 )}
 
-                {stepDescription.data && (
+                {currentStepDescription?.data && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-4 bg-primary/10 rounded-lg border border-primary/20"
                   >
-                    <p className="font-body text-primary-foreground/90">{stepDescription.data}</p>
+                    <p className="font-body text-primary-foreground/90">{currentStepDescription.data}</p>
                   </motion.div>
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={handleGenerateStepDescription} disabled={stepDescription.isLoading}>
+                  <Button onClick={handleGenerateStepDescription} disabled={currentStepDescription?.isLoading}>
                     <Eye className="mr-2" />
                     What should it look like?
                   </Button>
@@ -875,19 +902,13 @@ export default function RecipeSavvyPage() {
               </CardContent>
               <CardFooter className="flex justify-between">
                 <Button
-                  onClick={() => {
-                    setCurrentStep(s => s - 1)
-                    setStepDescription({isLoading: false, data: null, error: null});
-                  }}
+                  onClick={() => setCurrentStep(s => s - 1)}
                   disabled={currentStep === 0}
                 >
                   <ChevronLeft className="mr-2" /> Previous Step
                 </Button>
                 {currentStep < recipeDetails.data!.instructions.length - 1 ? (
-                  <Button onClick={() => {
-                      setCurrentStep(s => s + 1);
-                      setStepDescription({isLoading: false, data: null, error: null});
-                    }}>
+                  <Button onClick={() => setCurrentStep(s => s + 1)}>
                     Next Step <ChevronRight className="ml-2" />
                   </Button>
                 ) : (
@@ -1017,6 +1038,8 @@ export default function RecipeSavvyPage() {
         onOpenChange={setIsSettingsOpen}
         apiKey={apiKey}
         onApiKeyChange={setApiKey}
+        model={model}
+        onModelChange={handleAddModel}
       />
       
       <Dialog open={isTroubleshootDialogOpen} onOpenChange={setIsTroubleshootDialogOpen}>

@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {ModelId} from '@genkit-ai/googleai';
 
 const GenerateRecipesFromIngredientsInputSchema = z.object({
   ingredients: z
@@ -17,6 +18,7 @@ const GenerateRecipesFromIngredientsInputSchema = z.object({
     .describe('A list of ingredients that the user has on hand.'),
   halalMode: z.boolean().optional().describe('Whether to only suggest halal recipes.'),
   apiKey: z.string().optional().describe('Google AI API key.'),
+  model: z.string().optional().describe('The model to use for generation.'),
 });
 export type GenerateRecipesFromIngredientsInput = z.infer<
   typeof GenerateRecipesFromIngredientsInputSchema
@@ -56,6 +58,7 @@ const generateRecipesFromIngredientsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input, {
+      model: input.model as ModelId,
       config: input.apiKey ? { apiKey: input.apiKey } : undefined,
     });
     return output!;

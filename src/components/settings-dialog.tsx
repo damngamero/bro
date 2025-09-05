@@ -16,15 +16,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Moon, Sun } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
+
+type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
 interface SettingsDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     apiKey: string | null;
     onApiKeyChange: (apiKey: string | null) => void;
+    model: ModelId;
+    onModelChange: (model: ModelId) => void;
 }
 
-export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange }: SettingsDialogProps) {
+export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, model, onModelChange }: SettingsDialogProps) {
   const { setTheme, theme } = useTheme()
   const [localApiKey, setLocalApiKey] = useState(apiKey || "");
   const { toast } = useToast();
@@ -39,7 +44,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange }:
         onApiKeyChange(localApiKey);
         toast({
             title: "Settings Saved",
-            description: "Your API key has been saved.",
+            description: "Your API key and preferences have been saved.",
         });
     } else {
         localStorage.removeItem("googleApiKey");
@@ -74,7 +79,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange }:
                 className="col-span-3" 
             />
           </div>
-          <p className="text-xs text-muted-foreground px-1 text-center col-span-4">
+          <p className="text-xs text-muted-foreground px-1 text-center col-span-4 -mt-2">
             Get your Google AI API key from{" "}
             <a 
                 href="https://aistudio.google.com/app/apikey" 
@@ -86,6 +91,24 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange }:
             </a>. 
             Your key is stored only in your browser.
           </p>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+             <Label className="text-right">Model</Label>
+             <RadioGroup
+                value={model}
+                onValueChange={(value: string) => onModelChange(value as ModelId)}
+                className="col-span-3 flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="googleai/gemini-2.5-pro" id="gemini-pro" />
+                    <Label htmlFor="gemini-pro">Pro</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="googleai/gemini-2.5-flash" id="gemini-flash" />
+                    <Label htmlFor="gemini-flash">Flash</Label>
+                </div>
+              </RadioGroup>
+          </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">

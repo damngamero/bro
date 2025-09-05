@@ -6,10 +6,12 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import {ModelId} from '@genkit-ai/googleai';
 
 const IdentifyTimedStepsInputSchema = z.object({
   instructions: z.array(z.string()).describe('A list of cooking instructions.'),
   apiKey: z.string().optional().describe('Google AI API key.'),
+  model: z.string().optional().describe('The model to use for generation.'),
 });
 
 export type IdentifyTimedStepsInput = z.infer<typeof IdentifyTimedStepsInputSchema>;
@@ -37,7 +39,7 @@ const identifyTimedStepsFlow = ai.defineFlow(
     inputSchema: IdentifyTimedStepsInputSchema,
     outputSchema: IdentifyTimedStepsOutputSchema,
   },
-  async ({ instructions, apiKey }) => {
+  async ({ instructions, apiKey, model }) => {
     const prompt = `You are a recipe analysis expert. Review the following cooking instructions and identify any steps that have a specific time duration mentioned (e.g., "for 5 minutes", "about 1-2 hours"). For each timed step you find, provide its step number (1-based index) and the total duration in minutes.
 
 Instructions:
@@ -47,6 +49,7 @@ If a step has a range (e.g., 10-15 minutes), use the average. If a step mentions
 
     const { output } = await ai.generate({
       prompt,
+      model: model as ModelId,
       output: { schema: IdentifyTimedStepsOutputSchema },
       config: apiKey ? { apiKey } : undefined,
     });
