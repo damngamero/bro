@@ -86,7 +86,7 @@ export function VariationDialog({
       } else {
         toast({
           variant: "destructive",
-          title: "We hit a wall!",
+          title: "Well, we hit a wall! 🧱",
           description: result.reason || "Couldn't create a variation with these changes.",
         })
       }
@@ -166,5 +166,3 @@ export function VariationDialog({
     </Dialog>
   )
 }
-
-    

@@ -105,7 +105,7 @@ type PreviousState = {
   };
 };
 
-const MAX_TIPS = 15;
+const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 8;
 const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
