@@ -5,7 +5,7 @@ import { getFirestore } from 'firebase/firestore';
 const firebaseConfig = {
   projectId: 'recipesavvy-fspvn',
   appId: '1:560392336050:web:bc5ce667a2784b398d8fab',
-  storageBucket: 'recipesavvy-fspvn.firebasestorage.app',
+  storageBucket: 'recipesavvy-fspvn.appspot.com',
   apiKey: 'AIzaSyAYhYLrLJoknrqwDUkjlsImO0Y0EcUIROM',
   authDomain: 'recipesavvy-fspvn.firebaseapp.com',
   messagingSenderId: '560392336050',
