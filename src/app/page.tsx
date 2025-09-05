@@ -35,7 +35,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { RecipeChatbot } from '@/components/recipe-chatbot';
 
 type RecipeDetailsState = {
   isLoading: boolean;
@@ -477,16 +476,6 @@ export default function RecipeSavvyPage() {
           <p>Built with ❤️ by You</p>
         </footer>
       </div>
-      
-      {selectedRecipe && recipeDetails.data && apiKey && (
-        <RecipeChatbot
-          recipe={{
-            name: selectedRecipe,
-            ...recipeDetails.data,
-          }}
-          apiKey={apiKey}
-        />
-      )}
 
       <SettingsDialog
         isOpen={isSettingsOpen}
