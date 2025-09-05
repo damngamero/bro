@@ -35,7 +35,7 @@ const generateRandomRecipesFlow = ai.defineFlow(
     outputSchema: GenerateRandomRecipesOutputSchema,
   },
   async ({ count, apiKey, model }) => {
-    const prompt = `You are a helpful assistant. Your goal is to provide ${count} random, popular, and relatively easy-to-make recipe names. Just provide the names, no extra text.`;
+    const prompt = `You are a helpful assistant. Your goal is to provide ${count} completely random, popular, diverse, and relatively easy-to-make recipe names. Ensure the suggestions are varied and not repetitive. Just provide the names, no extra text.`;
 
     const { output } = await ai.generate({
       prompt,

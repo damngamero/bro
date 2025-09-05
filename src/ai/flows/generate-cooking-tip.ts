@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Generates a random, useful cooking tip.
+ * @fileOverview Generates a random, useful tip about the application's functionality.
  */
 
 import { ai } from '@/ai/genkit';
@@ -12,8 +12,6 @@ const GenerateCookingTipInputSchema = z.object({
   previousTips: z.array(z.string()).describe('A list of previously shown tips to avoid repetition.'),
   context: z.object({
     view: z.string().describe("The user's current view in the app (e.g., 'search', 'cooking')."),
-    recipeName: z.string().optional().describe('The name of the recipe the user is currently viewing or cooking, if any.'),
-    step: z.string().optional().describe('The current cooking step, if applicable.'),
   }).optional().describe('The context of where the user is in the app.'),
   apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().optional().describe('The model to use for generation.'),
@@ -22,7 +20,7 @@ const GenerateCookingTipInputSchema = z.object({
 export type GenerateCookingTipInput = z.infer<typeof GenerateCookingTipInputSchema>;
 
 const GenerateCookingTipOutputSchema = z.object({
-  tip: z.string().describe('A single, useful, and relatively short cooking tip. It should be a general tip, not related to a specific recipe.'),
+  tip: z.string().describe('A single, useful, and relatively short tip about how to use the app. It should be a general tip about a feature.'),
 });
 
 export type GenerateCookingTipOutput = z.infer<typeof GenerateCookingTipOutputSchema>;
@@ -40,15 +38,31 @@ const generateCookingTipFlow = ai.defineFlow(
     outputSchema: GenerateCookingTipOutputSchema,
   },
   async ({ previousTips, context, apiKey, model }) => {
-    let prompt = `You are a helpful assistant for a cooking app. Your goal is to provide a single, useful cooking tip for the user.`;
+    let prompt = `You are a helpful assistant for a recipe application called RecipeSavvy. Your goal is to provide a single, useful tip about the app's functionality.
 
-    if (context?.view === 'cooking' && context.recipeName && context.step) {
+The app has the following features:
+- Finding recipes by ingredients or by name.
+- Halal mode and allergen filtering.
+- A "Surprise Me" button to get a random recipe.
+- Saving recipes to a "Cookbook".
+- A "Cooking Mode" with step-by-step instructions.
+- In Cooking Mode: a timer, a "what should it look like?" visual description, and a troubleshooting helper.
+- Creating variations of a recipe by excluding or adding ingredients.
+- An "Undo" feature when navigating back to the home screen.
+- Settings to manage API key and theme.
+
+The tip should be about using one of these features. It should be concise and easy to understand.
+`;
+
+    if (context?.view === 'cooking') {
       prompt += `
-The user is currently cooking "${context.recipeName}" and is on the following step: "${context.step}".
-Provide a tip relevant to this specific step or recipe if possible. Otherwise, a general cooking tip is fine.`;
+The user is currently in 'Cooking Mode'. Provide a tip relevant to the features available in this mode.`;
+    } else if (context?.view === 'details') {
+       prompt += `
+The user is currently viewing a recipe's details. Provide a tip about the Cookbook or Recipe Variation features.`;
     } else {
       prompt += `
-The tip should be general purpose and not tied to any specific recipe. It should be concise and easy to understand.`;
+Provide a general tip about finding recipes, managing settings, or using the allergen filters.`;
     }
 
     prompt += `
@@ -56,7 +70,7 @@ The tip should be general purpose and not tied to any specific recipe. It should
 To ensure variety, please do not repeat any of the following previously shown tips:
 ${previousTips.map(tip => `- ${tip}`).join('\n')}
 
-Please provide one new, unique cooking tip.`;
+Please provide one new, unique, and helpful tip about using the app. Frame it as a helpful suggestion.`;
 
     const { output } = await ai.generate({
       prompt,

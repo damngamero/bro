@@ -113,7 +113,7 @@ const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 export default function RecipeSavvyPage() {
   const [currentView, setCurrentView] = useState<View>('search');
   
-  const [ingredients, setIngredients] = useState<string[]>(['Flour', 'Eggs', 'Sugar']);
+  const [ingredients, setIngredients] = useState<string[]>([]);
   const [newIngredient, setNewIngredient] = useState('');
   const [recipeName, setRecipeName] = useState('');
   const [isHalal, setIsHalal] = useState(false);
@@ -215,7 +215,7 @@ export default function RecipeSavvyPage() {
                 title: (
                     <div className="flex items-center gap-2">
                         <Lightbulb className="text-yellow-400" />
-                        Cooking Tip
+                        Pro Tip
                     </div>
                 ),
                 description: tip,
@@ -369,6 +369,7 @@ export default function RecipeSavvyPage() {
       setCurrentView('details');
       setShowCookbook(false); 
       setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
+      clearPreviousState();
 
       if (restoredDetails) {
         setRecipeDetails(restoredDetails);
@@ -594,7 +595,7 @@ export default function RecipeSavvyPage() {
 
 
     setCurrentView('search');
-    setIngredients(['Flour', 'Eggs', 'Sugar']);
+    setIngredients([]);
     setNewIngredient('');
     setRecipeName('');
     setGeneratedRecipes([]);
