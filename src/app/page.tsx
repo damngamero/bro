@@ -69,7 +69,7 @@ type RecipeDetailsState = {
   timedSteps: IdentifyTimedStepsOutput['timedSteps'];
 };
 
-type FavoriteRecipe = {
+type CookbookRecipe = {
   name: string;
   details: RecipeDetailsOutput;
 };
@@ -98,8 +98,8 @@ export default function RecipeSavvyPage() {
     timedSteps: [],
   });
 
-  const [favorites, setFavorites] = useState<FavoriteRecipe[]>([]);
-  const [showFavorites, setShowFavorites] = useState(false);
+  const [cookbook, setCookbook] = useState<CookbookRecipe[]>([]);
+  const [showCookbook, setShowCookbook] = useState(false);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -145,9 +145,9 @@ export default function RecipeSavvyPage() {
       setApiKey(storedApiKey);
     }
 
-    const storedFavorites = localStorage.getItem('favoriteRecipes');
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
+    const storedCookbook = localStorage.getItem('cookbookRecipes');
+    if (storedCookbook) {
+      setCookbook(JSON.parse(storedCookbook));
     }
   }, []);
 
@@ -183,11 +183,12 @@ export default function RecipeSavvyPage() {
       setCurrentStep(0);
       setStepDescription({ isLoading: false, data: null, error: null });
       setCurrentView('details');
+      setShowCookbook(false); // Hide cookbook when a recipe is selected
 
-      const favorite = favorites.find(f => f.name === recipeName);
-      if (favorite) {
-        setRecipeDetails({ isLoading: false, data: favorite.details, error: null, timedSteps: [] }); // Timed steps need fetching
-        // Still fetch timed steps even for favorites
+      const cookbookRecipe = cookbook.find(f => f.name === recipeName);
+      if (cookbookRecipe) {
+        setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: [] }); // Timed steps need fetching
+        // Still fetch timed steps even for cookbook recipes
       }
 
       if (!ensureApiKey()) {
@@ -196,7 +197,7 @@ export default function RecipeSavvyPage() {
       }
 
       try {
-        const details = favorite ? favorite.details : await generateRecipeDetails({
+        const details = cookbookRecipe ? cookbookRecipe.details : await generateRecipeDetails({
           recipeName,
           halalMode: isHalal,
           apiKey: apiKey!,
@@ -223,7 +224,7 @@ export default function RecipeSavvyPage() {
         });
       }
     },
-    [apiKey, isHalal, toast, favorites, ensureApiKey]
+    [apiKey, isHalal, toast, cookbook, ensureApiKey]
   );
   
   const handleGetRecipe = useCallback(async () => {
@@ -251,7 +252,7 @@ export default function RecipeSavvyPage() {
       return;
     }
     setIsGeneratingRecipes(true);
-    setShowFavorites(false);
+    setShowCookbook(false);
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowAllRecipes(false);
@@ -284,10 +285,10 @@ export default function RecipeSavvyPage() {
   }, [ingredients, isHalal, apiKey, toast, ensureApiKey]);
 
   useEffect(() => {
-    if ((generatedRecipes.length > 0 || showFavorites) && resultsRef.current) {
+    if ((generatedRecipes.length > 0 || showCookbook) && resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [generatedRecipes, showFavorites]);
+  }, [generatedRecipes, showCookbook]);
 
   useEffect(() => {
     if (currentView !== 'search' && topRef.current) {
@@ -300,13 +301,16 @@ export default function RecipeSavvyPage() {
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     // In recipe mode, going back should not scroll to results, but to the top.
-    if (mode === 'ingredients' && (generatedRecipes.length > 0 || showFavorites)) {
+    if (mode === 'ingredients' && (generatedRecipes.length > 0 || showCookbook)) {
       setTimeout(() => {
         if (resultsRef.current) {
           resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
-    } else {
+    } else if (showCookbook) {
+       // do nothing, stay on cookbook view
+    }
+    else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -318,7 +322,7 @@ export default function RecipeSavvyPage() {
     setRecipeName('');
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
-    setShowFavorites(false);
+    setShowCookbook(false);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setCurrentStep(0);
     setStepDescription({ isLoading: false, data: null, error: null });
@@ -326,23 +330,23 @@ export default function RecipeSavvyPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const toggleFavorite = (recipeName: string, recipeDetails: RecipeDetailsOutput) => {
-    const updatedFavorites = favorites.some(f => f.name === recipeName)
-      ? favorites.filter(f => f.name !== recipeName)
-      : [...favorites, { name: recipeName, details: recipeDetails }];
+  const toggleCookbookRecipe = (recipeName: string, recipeDetails: RecipeDetailsOutput) => {
+    const updatedCookbook = cookbook.some(f => f.name === recipeName)
+      ? cookbook.filter(f => f.name !== recipeName)
+      : [...cookbook, { name: recipeName, details: recipeDetails }];
 
-    setFavorites(updatedFavorites);
-    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites));
+    setCookbook(updatedCookbook);
+    localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
 
     toast({
-      title: favorites.some(f => f.name === recipeName)
-        ? 'Removed from Favorites'
-        : 'Added to Favorites',
+      title: cookbook.some(f => f.name === recipeName)
+        ? 'Removed from My Cookbook'
+        : 'Added to My Cookbook',
       description: recipeName,
     });
   };
 
-  const isFavorited = (recipeName: string) => favorites.some(f => f.name === recipeName);
+  const isInCookbook = (recipeName: string) => cookbook.some(f => f.name === recipeName);
 
   const handleGenerateStepDescription = async () => {
     if (!ensureApiKey() || !recipeDetails.data) return;
@@ -612,7 +616,7 @@ export default function RecipeSavvyPage() {
                     </p>
                   </motion.div>
                 )}
-                {(generatedRecipes.length > 0 || showFavorites) && !isGeneratingRecipes && (
+                {(generatedRecipes.length > 0 || showCookbook) && !isGeneratingRecipes && (
                   <motion.div
                     key="recipe-list"
                     initial={{ opacity: 0 }}
@@ -620,17 +624,17 @@ export default function RecipeSavvyPage() {
                     transition={{ delay: 0.2 }}
                   >
                     <h2 className="text-3xl font-headline text-center mb-6">
-                      {showFavorites ? 'Your Favorite Recipes' : "Here's what you can make"}
+                      {showCookbook ? 'My Cookbook' : "Here's what you can make"}
                     </h2>
 
-                    {showFavorites && favorites.length === 0 && (
+                    {showCookbook && cookbook.length === 0 && (
                       <p className="text-center text-muted-foreground">
-                        You haven't saved any favorites yet.
+                        You haven't saved any recipes to your cookbook yet.
                       </p>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(showFavorites ? favorites.map(f => f.name) : recipesToShow).map(
+                      {(showCookbook ? cookbook.map(f => f.name) : recipesToShow).map(
                         recipe => (
                           <motion.div
                             key={recipe}
@@ -652,7 +656,7 @@ export default function RecipeSavvyPage() {
                         )
                       )}
                     </div>
-                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && (
+                     {generatedRecipes.length > 4 && !showAllRecipes && mode === 'ingredients' && !showCookbook && (
                         <div className="mt-6 text-center">
                             <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
                         </div>
@@ -675,7 +679,7 @@ export default function RecipeSavvyPage() {
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to{' '}
-              {mode === 'ingredients' && generatedRecipes.length > 0 ? 'Results' : 'Search'}
+              {showCookbook ? 'Cookbook' : (mode === 'ingredients' && generatedRecipes.length > 0 ? 'Results' : 'Search')}
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -695,12 +699,12 @@ export default function RecipeSavvyPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() =>
-                        toggleFavorite(selectedRecipe!, recipeDetails.data!)
+                        toggleCookbookRecipe(selectedRecipe!, recipeDetails.data!)
                       }
                     >
                       <Heart
                         className={
-                          isFavorited(selectedRecipe!)
+                          isInCookbook(selectedRecipe!)
                             ? 'fill-red-500 text-red-500'
                             : ''
                         }
@@ -960,7 +964,7 @@ export default function RecipeSavvyPage() {
       <div className="flex flex-col min-h-screen bg-background">
         <header ref={topRef} className="container mx-auto px-4 pt-8 pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center justify-center gap-4 text-center">
+            <button onClick={handleStartOver} className="flex items-center justify-center gap-4 text-center">
               <ChefHat className="h-12 w-12 text-primary" />
               <div>
                 <h1 className="text-5xl font-headline text-primary-foreground tracking-wider">
@@ -970,20 +974,20 @@ export default function RecipeSavvyPage() {
                   Turn your ingredients into delicious meals.
                 </p>
               </div>
-            </div>
+            </button>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setShowFavorites(true);
+                  setShowCookbook(true);
                   setGeneratedRecipes([]);
                   setSelectedRecipe(null);
                   setCurrentView('search');
                 }}
               >
                 <BookHeart />
-                <span className="sr-only">Favorites</span>
+                <span className="sr-only">My Cookbook</span>
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
                 <Settings />
