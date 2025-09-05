@@ -24,6 +24,7 @@ import {
   BookOpen,
   LoaderCircle,
   Heart,
+  BookHeart,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
