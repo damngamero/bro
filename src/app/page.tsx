@@ -6,7 +6,7 @@ import {
   generateRecipeDetails,
   type RecipeDetailsOutput,
 } from '@/ai/flows/generate-recipe-details';
-import { generateStepImage } from '@/ai/flows/generate-step-image';
+import { generateStepDescription } from '@/ai/flows/generate-step-description';
 import { troubleshootStep } from '@/ai/flows/troubleshoot-step';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,7 @@ import {
   BookHeart,
   ChevronLeft,
   ChevronRight,
-  Camera,
+  Eye,
   AlertTriangle,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -92,7 +92,7 @@ export default function RecipeSavvyPage() {
 
   const [isCookingMode, setIsCookingMode] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [stepImage, setStepImage] = useState<{
+  const [stepDescription, setStepDescription] = useState<{
     isLoading: boolean;
     data: string | null;
     error: string | null;
@@ -257,7 +257,7 @@ export default function RecipeSavvyPage() {
     setRecipeDetails({ isLoading: false, data: null, error: null });
     setIsCookingMode(false);
     setCurrentStep(0);
-    setStepImage({ isLoading: false, data: null, error: null });
+    setStepDescription({ isLoading: false, data: null, error: null });
     // In recipe mode, going back should not scroll to results, but to the top.
     if (mode === 'ingredients') {
       setTimeout(() => {
@@ -280,7 +280,7 @@ export default function RecipeSavvyPage() {
     setRecipeDetails({ isLoading: false, data: null, error: null });
     setIsCookingMode(false);
     setCurrentStep(0);
-    setStepImage({ isLoading: false, data: null, error: null });
+    setStepDescription({ isLoading: false, data: null, error: null });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -302,23 +302,23 @@ export default function RecipeSavvyPage() {
 
   const isFavorited = (recipeName: string) => favorites.some(f => f.name === recipeName);
 
-  const handleGenerateStepImage = async () => {
+  const handleGenerateStepDescription = async () => {
     if (!ensureApiKey() || !recipeDetails.data) return;
-    setStepImage({ isLoading: true, data: null, error: null });
+    setStepDescription({ isLoading: true, data: null, error: null });
     try {
-      const result = await generateStepImage({
+      const result = await generateStepDescription({
         recipeName: selectedRecipe!,
         instruction: recipeDetails.data.instructions[currentStep],
         apiKey: apiKey!,
       });
-      setStepImage({ isLoading: false, data: result.imageUrl, error: null });
+      setStepDescription({ isLoading: false, data: result.description, error: null });
     } catch (error) {
       console.error(error);
-      setStepImage({ isLoading: false, data: null, error: 'Failed to generate image.' });
+      setStepDescription({ isLoading: false, data: null, error: 'Failed to get description.' });
       toast({
         variant: 'destructive',
-        title: 'Image Generation Failed',
-        description: 'Could not generate the image. Please try again.',
+        title: 'Description Failed',
+        description: 'Could not generate the description. Please try again.',
       });
     }
   };
@@ -626,34 +626,29 @@ export default function RecipeSavvyPage() {
                               {recipeDetails.data.instructions[currentStep]}
                             </p>
 
-                            {stepImage.isLoading && (
-                              <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
+                            {stepDescription.isLoading && (
+                              <div className="flex items-center justify-center h-24 bg-muted rounded-lg">
                                 <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
                               </div>
                             )}
 
-                            {stepImage.error && (
-                               <div className="text-destructive text-center py-4">{stepImage.error}</div>
+                            {stepDescription.error && (
+                               <div className="text-destructive text-center py-4">{stepDescription.error}</div>
                             )}
 
-                            {stepImage.data && (
+                            {stepDescription.data && (
                               <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="relative aspect-video"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-4 bg-primary/10 rounded-lg border border-primary/20"
                               >
-                                <Image
-                                  src={stepImage.data}
-                                  alt={`Step ${currentStep + 1} for ${selectedRecipe}`}
-                                  fill
-                                  className="rounded-lg object-cover"
-                                />
+                               <p className="font-body text-primary-foreground/90">{stepDescription.data}</p>
                               </motion.div>
                             )}
 
                             <div className="flex flex-wrap gap-2">
-                              <Button onClick={handleGenerateStepImage} disabled={stepImage.isLoading}>
-                                <Camera className="mr-2" />
+                              <Button onClick={handleGenerateStepDescription} disabled={stepDescription.isLoading}>
+                                <Eye className="mr-2" />
                                 What should it look like?
                               </Button>
                               <Button
@@ -679,7 +674,7 @@ export default function RecipeSavvyPage() {
                             {currentStep < recipeDetails.data.instructions.length - 1 ? (
                               <Button onClick={() => {
                                   setCurrentStep(s => s + 1);
-                                  setStepImage({isLoading: false, data: null, error: null});
+                                  setStepDescription({isLoading: false, data: null, error: null});
                                 }}>
                                 Next Step <ChevronRight className="ml-2" />
                               </Button>
