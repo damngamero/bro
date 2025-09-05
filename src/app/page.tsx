@@ -318,18 +318,21 @@ export default function RecipeSavvyPage() {
     setIngredients(ingredients.filter(i => i !== ingredientToRemove));
   };
 
-  const ensureApiKey = useCallback(() => {
+  const ensureApiKey = useCallback((showAlert = true) => {
     if (!apiKey) {
-      toast({
-        variant: 'destructive',
-        title: 'API Key Missing',
-        description: 'Please add your Google AI API key in the settings.',
-      });
+      if (showAlert) {
+        toast({
+          variant: 'destructive',
+          title: 'API Key Missing',
+          description: 'Please add your Google AI API key in the settings.',
+        });
+      }
       setIsSettingsOpen(true);
       return false;
     }
     return true;
   }, [apiKey, toast]);
+
 
   const handleSelectRecipe = useCallback(
     async (recipeName: string, newDetails?: RecipeDetailsOutput) => {
@@ -467,7 +470,7 @@ export default function RecipeSavvyPage() {
     try {
       const { recipes } = await generateRandomRecipes({ count: 1, apiKey: apiKey!, model });
       if (recipes && recipes.length > 0) {
-        await handleGetRecipe(recipes[0]);
+        await handleSelectRecipe(recipes[0]);
       } else {
         toast({
           variant: 'destructive',
@@ -485,7 +488,7 @@ export default function RecipeSavvyPage() {
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [apiKey, ensureApiKey, handleGetRecipe, model, toast]);
+  }, [apiKey, ensureApiKey, handleSelectRecipe, model, toast]);
 
   useEffect(() => {
     if (generatedRecipes.length > 0 && resultsRef.current) {
@@ -567,7 +570,7 @@ export default function RecipeSavvyPage() {
       });
       setStepDescriptionsCache(prev => ({
         ...prev,
-        [currentStep]: { isLoading: false, data: result.description, error: null }
+        [currentView]: { isLoading: false, data: result.description, error: null }
       }));
     } catch (error) {
       console.error(error);
@@ -673,7 +676,7 @@ export default function RecipeSavvyPage() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
+          <Button onClick={() => setShowCookbook(false)} variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
           </Button>
           <h2 className="text-3xl font-headline text-center mb-6">
@@ -768,6 +771,7 @@ export default function RecipeSavvyPage() {
                             type="text"
                             value={newIngredient}
                             onChange={e => setNewIngredient(e.target.value)}
+                            onClick={() => isApiKeyMissing && ensureApiKey(false)}
                             placeholder="e.g., Chicken breast"
                             className="flex-grow"
                             disabled={isApiKeyMissing}
@@ -819,6 +823,7 @@ export default function RecipeSavvyPage() {
                             type="text"
                             value={recipeName}
                             onChange={e => setRecipeName(e.target.value)}
+                            onClick={() => isApiKeyMissing && ensureApiKey(false)}
                             placeholder="e.g., Chicken Alfredo"
                             className="flex-grow"
                             disabled={isApiKeyMissing}
@@ -865,7 +870,7 @@ export default function RecipeSavvyPage() {
                     Surprise Me
                   </Button>
                 
-                {(ingredients.length > 3 || recipeName) && (
+                {(ingredients.length > 0 || recipeName) && (
                   <Button
                     onClick={() => {
                         setIngredients([]);
@@ -1339,7 +1344,7 @@ export default function RecipeSavvyPage() {
         onAllergensChange={setAllergens}
       />
       
-      {recipeDetails.data && (
+      {selectedRecipe && recipeDetails.data && (
         <VariationDialog
           isOpen={isVariationOpen}
           onOpenChange={setIsVariationOpen}
@@ -1402,3 +1407,5 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
+
+    
