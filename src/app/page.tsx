@@ -115,6 +115,7 @@ export default function RecipeSavvyPage() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [stepDescriptionsCache, setStepDescriptionsCache] = useState<Record<number, StepDescription>>({});
+  const currentStepDescription = stepDescriptionsCache[currentStep];
 
   const [isTroubleshootDialogOpen, setIsTroubleshootDialogOpen] = useState(false);
   const [troubleshootQuery, setTroubleshootQuery] = useState('');
@@ -193,24 +194,32 @@ export default function RecipeSavvyPage() {
   const handleSelectRecipe = useCallback(
     async (recipeName: string) => {
       setSelectedRecipe(recipeName);
-      setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
       setCurrentStep(0);
       setStepDescriptionsCache({});
       setCurrentView('details');
       setShowCookbook(false); 
+      setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
 
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
       if (cookbookRecipe) {
-        setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: [] }); 
+        // If it's a cookbook recipe, use the saved details and skip the API call.
+        const timedStepsResult = await identifyTimedSteps({
+            instructions: cookbookRecipe.details.instructions,
+            apiKey: apiKey!, // API key is still needed for this flow
+            model,
+        });
+        setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: timedStepsResult.timedSteps });
+        return;
       }
-
+      
+      // If it's a new recipe, fetch the details.
       if (!ensureApiKey()) {
         setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.', timedSteps: [] });
         return;
       }
 
       try {
-        const details = cookbookRecipe ? cookbookRecipe.details : await generateRecipeDetails({
+        const details = await generateRecipeDetails({
           recipeName,
           halalMode: isHalal,
           apiKey: apiKey!,
@@ -316,6 +325,7 @@ export default function RecipeSavvyPage() {
     setCurrentView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
+    setShowCookbook(false);
     if (mode === 'ingredients' && generatedRecipes.length > 0) {
       setTimeout(() => {
         if (resultsRef.current) {
@@ -475,7 +485,6 @@ export default function RecipeSavvyPage() {
   };
 
   const currentStepTimedInfo = recipeDetails.timedSteps.find(ts => ts.step === currentStep + 1);
-  const currentStepDescription = stepDescriptionsCache[currentStep];
 
   const renderContent = () => {
     if (showCookbook) {
@@ -487,7 +496,7 @@ export default function RecipeSavvyPage() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Button onClick={() => setShowCookbook(false)} variant="ghost" className="mb-4">
+          <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
           </Button>
           <h2 className="text-3xl font-headline text-center mb-6">
@@ -532,9 +541,9 @@ export default function RecipeSavvyPage() {
         return (
           <motion.div
             key="search-view"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: '-100%' }}
+            initial={{ opacity: 0, x: '-100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3 }}
           >
             <Card className="shadow-lg overflow-hidden">
@@ -709,9 +718,9 @@ export default function RecipeSavvyPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
                             whileHover={{ scale: 1.03, y: -5 }}
+                            onClick={() => handleSelectRecipe(recipe)}
                           >
                             <Card
-                              onClick={() => handleSelectRecipe(recipe)}
                               className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
                             >
                               <CardTitle className="font-headline text-xl">
@@ -1040,9 +1049,7 @@ export default function RecipeSavvyPage() {
                 size="icon"
                 onClick={() => {
                   setShowCookbook(true);
-                  setGeneratedRecipes([]);
-                  setSelectedRecipe(null);
-                  setCurrentView('search');
+                  setCurrentView('search'); 
                 }}
               >
                 <BookHeart />
