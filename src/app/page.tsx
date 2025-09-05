@@ -10,6 +10,7 @@ import { generateStepDescription } from '@/ai/flows/generate-step-description';
 import { troubleshootStep } from '@/ai/flows/troubleshoot-step';
 import { generateRelatedRecipes } from '@/ai/flows/generate-related-recipes';
 import { identifyTimedSteps, type IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
+import { generateCookingTip } from '@/ai/flows/generate-cooking-tip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,6 +30,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -52,6 +54,7 @@ import {
   Home,
   Timer,
   BellOff,
+  Lightbulb,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -85,6 +88,11 @@ type CookbookRecipe = {
 type Mode = 'ingredients' | 'recipe';
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
 
+const MAX_TIPS = 15;
+const MAX_TIPS_IN_30_MIN = 8;
+const MIN_TIP_INTERVAL_MS = 60 * 1000; // 1 minute
+const MAX_TIP_INTERVAL_MS = 8 * 60 * 1000; // 8 minutes
+
 export default function RecipeSavvyPage() {
   const [mode, setMode] = useState<Mode>('ingredients');
   const [currentView, setCurrentView] = useState<View>('search');
@@ -111,6 +119,7 @@ export default function RecipeSavvyPage() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [model, setModel] = useState<ModelId>('googleai/gemini-2.5-pro');
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -140,16 +149,67 @@ export default function RecipeSavvyPage() {
   const alarmRef = useRef<HTMLAudioElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [shownTips, setShownTips] = useState<string[]>([]);
+  const [tipCountLast30Min, setTipCountLast30Min] = useState(0);
+  const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
+  const scheduleNextTip = useCallback(() => {
+    if (tipTimeoutRef.current) {
+        clearTimeout(tipTimeoutRef.current);
+    }
+    if (!apiKey || shownTips.length >= MAX_TIPS || tipCountLast30Min >= MAX_TIPS_IN_30_MIN) {
+        return;
+    }
+    
+    const timeoutMs = Math.random() * (MAX_TIP_INTERVAL_MS - MIN_TIP_INTERVAL_MS) + MIN_TIP_INTERVAL_MS;
+
+    tipTimeoutRef.current = setTimeout(async () => {
+        try {
+            const { tip } = await generateCookingTip({ previousTips: shownTips, apiKey, model });
+            setShownTips(prev => [...prev, tip]);
+            setTipCountLast30Min(prev => prev + 1);
+
+            toast({
+                title: (
+                    <div className="flex items-center gap-2">
+                        <Lightbulb className="text-yellow-400" />
+                        Cooking Tip
+                    </div>
+                ),
+                description: tip,
+                duration: 10000,
+            });
+        } catch (error) {
+            console.error("Failed to fetch cooking tip:", error);
+        } finally {
+            scheduleNextTip();
+        }
+    }, timeoutMs);
+
+  }, [apiKey, model, shownTips, tipCountLast30Min, toast]);
+
+  useEffect(() => {
+    // Reset the 30-minute tip counter every 30 minutes
+    const interval = setInterval(() => {
+        setTipCountLast30Min(0);
+    }, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const storedApiKey = localStorage.getItem('googleApiKey');
     if (storedApiKey) {
       setApiKey(storedApiKey);
+      setIsApiKeyMissing(false);
+    } else {
+      setIsApiKeyMissing(true);
     }
+
     const storedModel = localStorage.getItem('geminiModel') as ModelId;
     if (storedModel) {
       setModel(storedModel);
@@ -159,7 +219,34 @@ export default function RecipeSavvyPage() {
     if (storedCookbook) {
       setCookbook(JSON.parse(storedCookbook));
     }
+    
+    const storedTips = localStorage.getItem('shownTips');
+    if (storedTips) {
+        setShownTips(JSON.parse(storedTips));
+    }
   }, []);
+  
+  useEffect(() => {
+    localStorage.setItem('shownTips', JSON.stringify(shownTips));
+  }, [shownTips]);
+
+  useEffect(() => {
+    scheduleNextTip();
+    return () => {
+        if (tipTimeoutRef.current) {
+            clearTimeout(tipTimeoutRef.current);
+        }
+    }
+  }, [scheduleNextTip]);
+  
+  const handleApiKeyChange = (newApiKey: string | null) => {
+    setApiKey(newApiKey);
+    if (newApiKey) {
+        setIsApiKeyMissing(false);
+    } else {
+        setIsApiKeyMissing(true);
+    }
+  };
 
   const handleAddModel = (newModel: ModelId) => {
     setModel(newModel);
@@ -202,17 +289,15 @@ export default function RecipeSavvyPage() {
 
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
       if (cookbookRecipe) {
-        // If it's a cookbook recipe, use the saved details and skip the API call.
         const timedStepsResult = await identifyTimedSteps({
             instructions: cookbookRecipe.details.instructions,
-            apiKey: apiKey!, // API key is still needed for this flow
+            apiKey: apiKey!,
             model,
         });
         setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: timedStepsResult.timedSteps });
         return;
       }
       
-      // If it's a new recipe, fetch the details.
       if (!ensureApiKey()) {
         setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.', timedSteps: [] });
         return;
@@ -373,7 +458,7 @@ export default function RecipeSavvyPage() {
   const handleGenerateStepDescription = async () => {
     if (!ensureApiKey() || !recipeDetails.data) return;
 
-    if (stepDescriptionsCache[currentStep]) return; // Use cache if available
+    if (stepDescriptionsCache[currentStep]) return;
 
     setStepDescriptionsCache(prev => ({
       ...prev,
@@ -447,7 +532,6 @@ export default function RecipeSavvyPage() {
     setStepDescriptionsCache({});
   }
 
-  // Timer Controls
   useEffect(() => {
     if (timer.isActive && timer.remaining > 0) {
       timerIntervalRef.current = setInterval(() => {
@@ -475,7 +559,7 @@ export default function RecipeSavvyPage() {
     setIsAlarmPlaying(false);
     alarmRef.current?.pause();
     if(alarmRef.current) alarmRef.current.currentTime = 0;
-    setTimer({ isActive: false, remaining: 0, duration: 0 }); // Reset timer
+    setTimer({ isActive: false, remaining: 0, duration: 0 });
   };
 
   const formatTime = (seconds: number) => {
@@ -546,6 +630,22 @@ export default function RecipeSavvyPage() {
             exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3 }}
           >
+            {isApiKeyMissing && (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>API Key Required</AlertTitle>
+                    <AlertDescription>
+                        Please set your Google AI API key in the settings to use the app.
+                        <Button
+                            variant="link"
+                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold"
+                            onClick={() => setIsSettingsOpen(true)}
+                        >
+                            Open Settings
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            )}
             <Card className="shadow-lg overflow-hidden">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">
@@ -581,8 +681,9 @@ export default function RecipeSavvyPage() {
                             onChange={e => setNewIngredient(e.target.value)}
                             placeholder="e.g., Chicken breast"
                             className="flex-grow"
+                            disabled={isApiKeyMissing}
                           />
-                          <Button type="submit" size="icon" aria-label="Add ingredient">
+                          <Button type="submit" size="icon" aria-label="Add ingredient" disabled={isApiKeyMissing}>
                             <Plus />
                           </Button>
                         </form>
@@ -631,6 +732,7 @@ export default function RecipeSavvyPage() {
                             onChange={e => setRecipeName(e.target.value)}
                             placeholder="e.g., Chicken Alfredo"
                             className="flex-grow"
+                            disabled={isApiKeyMissing}
                           />
                         </form>
                       </CardContent>
@@ -638,7 +740,7 @@ export default function RecipeSavvyPage() {
                   </TabsContent>
                 </Tabs>
                 <div className="flex items-center space-x-2 mt-4">
-                  <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} />
+                  <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
                   <Label htmlFor="halal-mode">Halal Mode</Label>
                 </div>
               </CardContent>
@@ -646,7 +748,7 @@ export default function RecipeSavvyPage() {
                 {mode === 'ingredients' ? (
                   <Button
                     onClick={handleGenerateRecipes}
-                    disabled={isGeneratingRecipes || ingredients.length === 0}
+                    disabled={isGeneratingRecipes || ingredients.length === 0 || isApiKeyMissing}
                     className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
                   >
                     {isGeneratingRecipes ? (
@@ -659,7 +761,7 @@ export default function RecipeSavvyPage() {
                 ) : (
                   <Button
                     onClick={handleGetRecipe}
-                    disabled={recipeDetails.isLoading || !recipeName}
+                    disabled={recipeDetails.isLoading || !recipeName || isApiKeyMissing}
                     className="w-full sm:w-auto flex-grow bg-accent hover:bg-accent/90 text-accent-foreground"
                   >
                     {recipeDetails.isLoading ? (
@@ -1082,7 +1184,7 @@ export default function RecipeSavvyPage() {
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
         apiKey={apiKey}
-        onApiKeyChange={setApiKey}
+        onApiKeyChange={handleApiKeyChange}
         model={model}
         onModelChange={handleAddModel}
       />
