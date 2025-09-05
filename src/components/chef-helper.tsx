@@ -65,7 +65,7 @@ export function ChefHelper({ recipeContext, apiKey }: ChefHelperProps) {
         title: "Error",
         description: "Sorry, I couldn't fetch an explanation. Please try again.",
       });
-      setMessages(messages => messages.slice(0, -1)); // Remove the user message on error
+      setMessages(prev => prev.slice(0, -1)); // Remove the user message on error
     } finally {
       setIsLoading(false);
     }
