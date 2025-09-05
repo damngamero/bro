@@ -35,7 +35,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ChefHelper } from '@/components/chef-helper';
 
 type RecipeDetailsState = {
   isLoading: boolean;
@@ -46,15 +45,6 @@ type RecipeDetailsState = {
 type FavoriteRecipe = {
   name: string;
   details: RecipeDetailsOutput;
-}
-
-function getRecipeContextString(recipe: RecipeDetailsOutput | null): string {
-    if (!recipe) return "";
-    return `
-        Description: ${recipe.description}
-        Ingredients: ${recipe.ingredients.join(', ')}
-        Instructions: ${recipe.instructions.map((step, i) => `${i + 1}. ${step}`).join('\n')}
-    `.trim();
 }
 
 export default function RecipeSavvyPage() {
@@ -486,14 +476,6 @@ export default function RecipeSavvyPage() {
           <p>Built with ❤️ by You</p>
         </footer>
       </div>
-      
-      {selectedRecipe && recipeDetails.data && apiKey && (
-        <ChefHelper
-            recipeContext={getRecipeContextString(recipeDetails.data)}
-            apiKey={apiKey}
-        />
-      )}
-
 
       <SettingsDialog
         isOpen={isSettingsOpen}
