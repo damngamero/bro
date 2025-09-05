@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, FormEvent, useRef, useEffect } from 'react';
@@ -361,13 +362,18 @@ export default function RecipeSavvyPage() {
 
 
   const handleSelectRecipe = useCallback(
-    async (recipeName: string, newDetails?: RecipeDetailsOutput) => {
+    async (recipeName: string, newDetails?: RecipeDetailsOutput, restoredDetails?: RecipeDetailsState) => {
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
       setCurrentView('details');
       setShowCookbook(false); 
       setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
+
+      if (restoredDetails) {
+        setRecipeDetails(restoredDetails);
+        return;
+      }
 
       if (newDetails) {
         const timedStepsResult = await identifyTimedSteps({
@@ -553,7 +559,6 @@ export default function RecipeSavvyPage() {
   };
 
   const handleStartOver = () => {
-    // If we're on a different screen, save the state before navigating home
     if(currentView !== 'search') {
       const currentState: PreviousState = {
         view: currentView,
@@ -565,7 +570,6 @@ export default function RecipeSavvyPage() {
       };
       setPreviousState(currentState);
 
-      // Show toast to go back
       const { id } = toast({
         duration: 15000,
         title: "Want to go back?",
@@ -580,7 +584,6 @@ export default function RecipeSavvyPage() {
         ),
       });
 
-      // Clear the saved state after 15 seconds
       if (previousStateTimeoutRef.current) {
           clearTimeout(previousStateTimeoutRef.current);
       }
@@ -608,7 +611,11 @@ export default function RecipeSavvyPage() {
     if (previousState) {
       setCurrentView(previousState.view);
       setSelectedRecipe(previousState.recipeName);
-      setRecipeDetails(previousState.recipeDetails);
+      if(previousState.view === 'details' && previousState.recipeName) {
+        handleSelectRecipe(previousState.recipeName, undefined, previousState.recipeDetails)
+      } else {
+        setRecipeDetails(previousState.recipeDetails);
+      }
       setCurrentStep(previousState.currentStep);
       setStepDescriptionsCache(previousState.stepDescriptionsCache);
       setRelatedRecipes(previousState.relatedRecipes);
@@ -998,12 +1005,12 @@ export default function RecipeSavvyPage() {
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {suggestedRecipes.map(
-                        recipe => (
+                        (recipe, index) => (
                           <motion.div
-                            key={recipe}
+                            key={`${recipe}-${index}`}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.3, delay: index * 0.1 }}
                             whileHover={{ scale: 1.03, y: -5 }}
                             onClick={() => handleSelectRecipe(recipe)}
                           >
@@ -1034,12 +1041,12 @@ export default function RecipeSavvyPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {recipesToShow.map(
-                        recipe => (
+                        (recipe, index) => (
                           <motion.div
                             key={recipe}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.3, delay: index * 0.1 }}
                             whileHover={{ scale: 1.03, y: -5 }}
                             onClick={() => handleSelectRecipe(recipe)}
                           >
