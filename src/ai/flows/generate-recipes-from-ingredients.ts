@@ -15,6 +15,8 @@ const GenerateRecipesFromIngredientsInputSchema = z.object({
   ingredients: z
     .array(z.string())
     .describe('A list of ingredients that the user has on hand.'),
+  halalMode: z.boolean().optional().describe('Whether to only suggest halal recipes.'),
+  apiKey: z.string().optional().describe('Google AI API key.'),
 });
 export type GenerateRecipesFromIngredientsInput = z.infer<
   typeof GenerateRecipesFromIngredientsInputSchema
@@ -40,6 +42,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateRecipesFromIngredientsInputSchema},
   output: {schema: GenerateRecipesFromIngredientsOutputSchema},
   prompt: `You are a recipe expert. Given the following list of ingredients, suggest some recipes.
+{{#if halalMode}}Only suggest halal recipes.{{/if}}
 
 Ingredients:
 {{#each ingredients}}- {{this}}\n{{/each}}`,
@@ -52,7 +55,9 @@ const generateRecipesFromIngredientsFlow = ai.defineFlow(
     outputSchema: GenerateRecipesFromIngredientsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt(input, {
+      config: input.apiKey ? { apiKey: input.apiKey } : undefined,
+    });
     return output!;
   }
 );
