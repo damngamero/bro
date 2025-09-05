@@ -363,7 +363,7 @@ export default function RecipeSavvyPage() {
       </main>
 
       <footer className="text-center py-4 text-muted-foreground text-sm">
-        <p>Built with ❤️ by RecipeSavvy</p>
+        <p>Built with ❤️ by Vibecoder ❤️💀</p>
       </footer>
     </div>
   );
