@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator"
 import { LoaderCircle } from "lucide-react"
 import { type RecipeDetailsOutput } from "@/ai/flows/generate-recipe-details"
 import { generateRecipeVariation, RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
+import { useTranslation } from "react-i18next"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -43,6 +44,7 @@ export function VariationDialog({
   model,
   onVariationCreated
 }: VariationDialogProps) {
+  const { t } = useTranslation();
   const [excludeIngredients, setExcludeIngredients] = useState<string[]>([])
   const [addons, setAddons] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
@@ -60,15 +62,15 @@ export function VariationDialog({
     if (!apiKey) {
       toast({
         variant: "destructive",
-        title: "API Key is missing",
+        title: t('apiKeyMissing'),
       })
       return
     }
     if (excludeIngredients.length === 0 && !addons.trim()) {
         toast({
             variant: "destructive",
-            title: "No changes requested",
-            description: "Please select ingredients to exclude or add addons.",
+            title: t('noChangesRequested'),
+            description: t('noChangesRequestedDescription'),
         });
         return;
     }
@@ -88,8 +90,8 @@ export function VariationDialog({
       } else {
         toast({
           variant: "destructive",
-          title: "Well, we hit a wall! 🧱",
-          description: result.reason || "Couldn't create a variation with these changes.",
+          title: t('variationNotPossible'),
+          description: result.reason || t('couldNotCreateVariation'),
           duration: 8000
         })
       }
@@ -97,8 +99,8 @@ export function VariationDialog({
       console.error(error)
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to generate recipe variation. Please try again.",
+        title: t('error'),
+        description: t('failedToGenerateVariation'),
       })
     } finally {
       setIsLoading(false)
@@ -109,18 +111,18 @@ export function VariationDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create a Variation</DialogTitle>
+          <DialogTitle>{t('createVariation')}</DialogTitle>
           <DialogDescription>
-            Adjust ingredients to create a new version of {recipeName}.
+            {t('createVariationDescription', { recipeName })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
           <div>
             <Label className="text-base font-medium">
-              Remove Ingredients
+              {t('removeIngredients')}
             </Label>
             <p className="text-sm text-muted-foreground pb-2">
-              Select ingredients you don't have or don't want to use.
+              {t('removeIngredientsDescription')}
             </p>
             <div className="space-y-2">
               {recipeDetails.ingredients.map((ingredient) => (
@@ -143,26 +145,26 @@ export function VariationDialog({
           <Separator />
           <div>
             <Label htmlFor="addons" className="text-base font-medium">
-              Try Different Addons
+              {t('tryDifferentAddons')}
             </Label>
              <p className="text-sm text-muted-foreground pb-2">
-              Enter ingredients to add, separated by commas.
+              {t('addAddonsDescription')}
             </p>
             <Input
               id="addons"
               value={addons}
               onChange={(e) => setAddons(e.target.value)}
-              placeholder="e.g., Mushrooms, Spinach"
+              placeholder={t('addonsPlaceholder')}
             />
           </div>
         </div>
         <DialogFooter>
             <DialogClose asChild>
-                <Button variant="ghost">Cancel</Button>
+                <Button variant="ghost">{t('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleGenerateVariation} disabled={isLoading}>
                 {isLoading && <LoaderCircle className="animate-spin mr-2" />}
-                Generate Variation
+                {t('generateVariation')}
             </Button>
         </DialogFooter>
       </DialogContent>

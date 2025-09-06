@@ -88,6 +88,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -124,6 +126,7 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 export default function RecipeSavvyPage() {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>('search');
   const [previousState, setPreviousState] = useState<PreviousState>(null);
   
@@ -237,7 +240,7 @@ export default function RecipeSavvyPage() {
                 title: (
                     <div className="flex items-center gap-2">
                         <Lightbulb className="text-yellow-400" />
-                        Pro Tip
+                        {t('proTip')}
                     </div>
                 ),
                 description: tip,
@@ -250,7 +253,7 @@ export default function RecipeSavvyPage() {
         }
     }, TIP_INTERVAL_MS);
 
-  }, [apiKey, model, shownTips, tipCountLast30Min, toast, view, selectedRecipe, recipeDetails.data, currentStep]);
+  }, [apiKey, model, shownTips, tipCountLast30Min, toast, view, selectedRecipe, recipeDetails.data, currentStep, t]);
 
   useEffect(() => {
     // Reset the 30-minute tip counter every 30 minutes
@@ -391,15 +394,15 @@ export default function RecipeSavvyPage() {
       if (showAlert) {
         toast({
           variant: 'destructive',
-          title: 'API Key Missing',
-          description: 'Please add your Google AI API key in the settings.',
+          title: t('apiKeyMissing'),
+          description: t('addApiKeyInSettings'),
         });
       }
       setIsSettingsOpen(true);
       return false;
     }
     return true;
-  }, [apiKey, toast]);
+  }, [apiKey, toast, t]);
 
   const clearPreviousState = () => {
     setPreviousState(null);
@@ -465,17 +468,17 @@ export default function RecipeSavvyPage() {
         setRecipeDetails({
           isLoading: false,
           data: null,
-          error: 'Failed to load recipe details.',
+          error: t('failedToLoadRecipe'),
           timedSteps: [],
         });
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load recipe details. Please try again.',
+          title: t('error'),
+          description: t('failedToLoadRecipe'),
         });
       }
     },
-    [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model]
+    [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model, t]
   );
   
   const handleGetRecipeFromName = useCallback(async () => {
@@ -483,13 +486,13 @@ export default function RecipeSavvyPage() {
     if (!recipeName.trim()) {
       toast({
         variant: 'destructive',
-        title: 'No Recipe Name',
-        description: 'Please enter the name of a recipe.',
+        title: t('noRecipeName'),
+        description: t('enterRecipeName'),
       });
       return;
     }
     handleSelectRecipe(recipeName);
-  }, [recipeName, ensureApiKey, toast, handleSelectRecipe]);
+  }, [recipeName, ensureApiKey, toast, handleSelectRecipe, t]);
 
 
   const handleGenerateRecipes = useCallback(async () => {
@@ -498,8 +501,8 @@ export default function RecipeSavvyPage() {
     if (ingredients.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'No Ingredients',
-        description: 'Please add some ingredients first.',
+        title: t('noIngredients'),
+        description: t('addIngredientsFirst'),
       });
       return;
     }
@@ -522,9 +525,9 @@ export default function RecipeSavvyPage() {
       });
       if (result.recipes.length === 0) {
         toast({
-          title: 'No Recipes Found',
+          title: t('noRecipesFound'),
           description:
-            "We couldn't find any recipes with your ingredients. Try adding more!",
+            t('noRecipesFoundDescription'),
         });
       }
       setGeneratedRecipes(result.recipes);
@@ -532,13 +535,13 @@ export default function RecipeSavvyPage() {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to generate recipes. Please try again.',
+        title: t('error'),
+        description: t('failedToGenerateRecipes'),
       });
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, useAllergens, allergens, maxCookTime, apiKey, toast, ensureApiKey, model]);
+  }, [ingredients, isHalal, useAllergens, allergens, maxCookTime, apiKey, toast, ensureApiKey, model, t]);
 
   const handleSurpriseMe = useCallback(async () => {
     if (!ensureApiKey()) return;
@@ -551,21 +554,21 @@ export default function RecipeSavvyPage() {
       } else {
         toast({
           variant: 'destructive',
-          title: 'Oh no!',
-          description: "Couldn't come up with a surprise. Please try again.",
+          title: t('ohNo'),
+          description: t('couldNotFindSurprise'),
         });
       }
     } catch (error) {
       console.error("Surprise me failed:", error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to find a surprise recipe. Please try again.',
+        title: t('error'),
+        description: t('failedToFindSurprise'),
       });
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [apiKey, ensureApiKey, handleSelectRecipe, model, toast]);
+  }, [apiKey, ensureApiKey, handleSelectRecipe, model, toast, t]);
 
   useEffect(() => {
     if (generatedRecipes.length > 0 && resultsRef.current) {
@@ -601,12 +604,12 @@ export default function RecipeSavvyPage() {
       setPreviousState({ view, recipeName: selectedRecipe });
       toast({
         id: 'undo-toast',
-        title: "Returned home",
-        description: "You can go back to where you were.",
+        title: t('returnedHome'),
+        description: t('canGoBack'),
         action: (
           <Button variant="outline" size="sm" onClick={handleRestoreState}>
             <Undo2 className="mr-2" />
-            Undo
+            {t('undo')}
           </Button>
         ),
         duration: 8000,
@@ -644,7 +647,7 @@ export default function RecipeSavvyPage() {
       setCookbook(updatedCookbook);
       localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
       toast({
-        title: 'Removed from My Cookbook',
+        title: t('removedFromCookbook'),
         description: recipeName,
       });
     } else if (recipeDetails) {
@@ -652,7 +655,7 @@ export default function RecipeSavvyPage() {
       setCookbook(updatedCookbook);
       localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
        toast({
-        title: 'Added to My Cookbook',
+        title: t('addedToCookbook'),
         description: recipeName,
       });
     }
@@ -708,12 +711,12 @@ export default function RecipeSavvyPage() {
       console.error(error);
       setStepDescriptionsCache(prev => ({
         ...prev,
-        [currentStep]: { isLoading: false, data: null, error: 'Failed to get description.' }
+        [currentStep]: { isLoading: false, data: null, error: t('failedToGetDescription') }
       }));
       toast({
         variant: 'destructive',
-        title: 'Description Failed',
-        description: 'Could not generate the description. Please try again.',
+        title: t('descriptionFailed'),
+        description: t('couldNotGenerateDescription'),
       });
     }
   };
@@ -732,11 +735,11 @@ export default function RecipeSavvyPage() {
       setTroubleshootingAdvice({ isLoading: false, data: result.advice, error: null });
     } catch (error) {
       console.error(error);
-      setTroubleshootingAdvice({ isLoading: false, data: null, error: 'Failed to get advice.' });
+      setTroubleshootingAdvice({ isLoading: false, data: null, error: t('failedToGetAdvice') });
       toast({
         variant: 'destructive',
-        title: 'Failed to get advice',
-        description: 'Could not get troubleshooting advice. Please try again.',
+        title: t('failedToGetAdviceTitle'),
+        description: t('failedToGetAdviceDescription'),
       });
     }
   };
@@ -750,7 +753,7 @@ export default function RecipeSavvyPage() {
       setRelatedRecipes({ isLoading: false, data: result.recipes, error: null });
     } catch(error) {
       console.error(error);
-      setRelatedRecipes({ isLoading: false, data: null, error: 'Failed to get related recipes.' });
+      setRelatedRecipes({ isLoading: false, data: null, error: t('failedToGetRelatedRecipes') });
     }
   };
 
@@ -812,8 +815,8 @@ export default function RecipeSavvyPage() {
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
       let result = "";
-      if (hours > 0) result += `${hours} hour${hours > 1 ? 's' : ''} `;
-      if (minutes > 0) result += `${minutes} minute${minutes > 1 ? 's' : ''}`;
+      if (hours > 0) result += `${hours} ${t(hours > 1 ? 'hours' : 'hour')} `;
+      if (minutes > 0) result += `${minutes} ${t(minutes > 1 ? 'minutes' : 'minute')}`;
       return result.trim();
   };
 
@@ -834,10 +837,10 @@ export default function RecipeSavvyPage() {
           transition={{ duration: 0.3 }}
         >
           <Button onClick={() => setShowCookbook(false)} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
+              <ArrowLeft className="mr-2 h-4 w-4" /> {t('backToSearch')}
           </Button>
           <h2 className="text-3xl font-headline text-center mb-6">
-              My Cookbook
+              {t('myCookbook')}
           </h2>
 
           {cookbook.length === 0 ? (
@@ -846,11 +849,11 @@ export default function RecipeSavvyPage() {
                     <div className="flex justify-center mb-4 text-muted-foreground">
                         <BookHeart size={48} />
                     </div>
-                    <CardTitle>Your Cookbook is Empty</CardTitle>
+                    <CardTitle>{t('cookbookEmpty')}</CardTitle>
                     <CardDescription>
-                        Save recipes you love to find them here later.
+                        {t('saveRecipesPrompt')}
                         <br/>
-                        <span className="text-xs italic">If you clear your browser cache, you lose your cookbook , so right em down</span>
+                        <span className="text-xs italic">{t('cacheWarningCookbook')}</span>
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -884,7 +887,7 @@ export default function RecipeSavvyPage() {
                             }}
                         >
                             <Trash2 size={18} />
-                            <span className="sr-only">Remove {recipe.name}</span>
+                            <span className="sr-only">{t('remove')} {recipe.name}</span>
                         </Button>
                     </CardFooter>
                   </Card>
@@ -912,15 +915,15 @@ export default function RecipeSavvyPage() {
             {isApiKeyMissing && (
                 <Alert variant="destructive" className="mb-6">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>API Key Required</AlertTitle>
+                    <AlertTitle>{t('apiKeyRequired')}</AlertTitle>
                     <AlertDescription>
-                        Please set your Google AI API key in the settings to use the app.
+                        {t('apiKeyRequiredDescription')}
                         <Button
                             variant="link"
                             className="p-0 h-auto ml-2 text-black dark:text-white font-bold"
                             onClick={() => setIsSettingsOpen(true)}
                         >
-                            Open Settings
+                            {t('openSettings')}
                         </Button>
                     </AlertDescription>
                 </Alert>
@@ -928,7 +931,7 @@ export default function RecipeSavvyPage() {
             <Card className="shadow-lg overflow-hidden">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">
-                  Find your next meal
+                  {t('findYourNextMeal')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -938,15 +941,15 @@ export default function RecipeSavvyPage() {
                   onValueChange={() => clearPreviousState()}
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="ingredients">By Ingredients</TabsTrigger>
-                    <TabsTrigger value="recipe">By Recipe Name</TabsTrigger>
+                    <TabsTrigger value="ingredients">{t('byIngredients')}</TabsTrigger>
+                    <TabsTrigger value="recipe">{t('byRecipeName')}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="ingredients">
                     <Card className="border-0 shadow-none">
                       <CardHeader className="px-1 pt-4">
-                        <CardTitle className="text-xl">What's in your pantry?</CardTitle>
+                        <CardTitle className="text-xl">{t('whatsInPantry')}</CardTitle>
                         <CardDescription>
-                          Add your ingredients and we'll find recipes for you.
+                          {t('addIngredientsPrompt')}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1">
@@ -956,7 +959,7 @@ export default function RecipeSavvyPage() {
                             className="w-full justify-start h-auto py-3 text-muted-foreground font-normal mb-4"
                         >
                             <Plus className="mr-2" />
-                            <span>Add ingredients...</span>
+                            <span>{t('addIngredients')}...</span>
                         </Button>
                         <div className="flex flex-wrap gap-2">
                           {ingredients.map(ingredient => (
@@ -969,7 +972,7 @@ export default function RecipeSavvyPage() {
                               <button
                                 onClick={() => handleRemoveIngredient(ingredient)}
                                 className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                                aria-label={`Remove ${ingredient}`}
+                                aria-label={`${t('remove')} ${ingredient}`}
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -983,10 +986,10 @@ export default function RecipeSavvyPage() {
                     <Card className="border-0 shadow-none">
                       <CardHeader className="px-1 pt-4">
                         <CardTitle className="text-xl">
-                          What do you want to cook?
+                          {t('whatToCook')}
                         </CardTitle>
                         <CardDescription>
-                          Enter the name of the recipe you'd like to find.
+                          {t('enterRecipeToFind')}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1 relative">
@@ -1002,7 +1005,7 @@ export default function RecipeSavvyPage() {
                             value={recipeName}
                             onChange={e => setRecipeName(e.target.value)}
                             onClick={() => isApiKeyMissing && ensureApiKey(false)}
-                            placeholder="e.g., Chicken Alfredo"
+                            placeholder={t('recipePlaceholder')}
                             className="flex-grow"
                             disabled={isApiKeyMissing}
                             autoComplete="off"
@@ -1033,16 +1036,16 @@ export default function RecipeSavvyPage() {
                 <div className="flex flex-wrap items-center space-x-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
-                    <Label htmlFor="halal-mode">Halal Mode</Label>
+                    <Label htmlFor="halal-mode">{t('halalMode')}</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch id="allergens-mode" checked={useAllergens} onCheckedChange={setUseAllergens} disabled={isApiKeyMissing}/>
                     <Button variant="link" className="p-0 h-auto" onClick={() => setIsAllergensOpen(true)}>
-                      Allergens
+                      {t('allergens')}
                     </Button>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Label htmlFor="max-cook-time">Max Cook Time (min)</Label>
+                    <Label htmlFor="max-cook-time">{t('maxCookTime')}</Label>
                     <Input
                       id="max-cook-time"
                       type="number"
@@ -1054,7 +1057,7 @@ export default function RecipeSavvyPage() {
                           setMaxCookTime(value)
                       }}
                       className="w-24"
-                      placeholder="e.g., 30"
+                      placeholder={t('e_g_30')}
                       disabled={isApiKeyMissing}
                     />
                   </div>
@@ -1071,7 +1074,7 @@ export default function RecipeSavvyPage() {
                     ) : (
                       <Sparkles className="mr-2" />
                     )}
-                    Find Recipes
+                    {t('findRecipes')}
                   </Button>
 
                   <Button
@@ -1081,7 +1084,7 @@ export default function RecipeSavvyPage() {
                     className="w-full sm:w-auto"
                   >
                      <Dices className="mr-2" />
-                    Surprise Me
+                    {t('surpriseMe')}
                   </Button>
                 
                 {(ingredients.length > 0 || recipeName) && (
@@ -1093,7 +1096,7 @@ export default function RecipeSavvyPage() {
                     variant="ghost"
                     className="w-full sm:w-auto"
                   >
-                    Clear
+                    {t('clear')}
                   </Button>
                 )}
               </CardFooter>
@@ -1111,7 +1114,7 @@ export default function RecipeSavvyPage() {
                   >
                     <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
                     <p className="font-headline text-xl text-primary-foreground">
-                      Whipping up some ideas...
+                      {t('whippingUpIdeas')}
                     </p>
                   </motion.div>
                 )}
@@ -1119,7 +1122,7 @@ export default function RecipeSavvyPage() {
                 {!isGeneratingRecipes && generatedRecipes.length === 0 && (
                   <motion.div>
                      <h2 className="text-3xl font-headline text-center mb-6">
-                      Try these recipes
+                      {t('tryTheseRecipes')}
                     </h2>
                     {isGeneratingSuggestions && (
                       <div className="flex justify-center">
@@ -1159,7 +1162,7 @@ export default function RecipeSavvyPage() {
                     transition={{ delay: 0.2 }}
                   >
                     <h2 className="text-3xl font-headline text-center mb-6">
-                      {"Here's what you can make"}
+                      {t('heresWhatYouCanMake')}
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1186,7 +1189,7 @@ export default function RecipeSavvyPage() {
                     </div>
                      {generatedRecipes.length > 4 && !showAllRecipes && (
                         <div className="mt-6 text-center">
-                            <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
+                            <Button onClick={() => setShowAllRecipes(true)}>{t('showMore')}</Button>
                         </div>
                     )}
                   </motion.div>
@@ -1206,7 +1209,7 @@ export default function RecipeSavvyPage() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
+              <ArrowLeft className="mr-2 h-4 w-4" /> {t('backToSearch')}
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -1236,7 +1239,7 @@ export default function RecipeSavvyPage() {
                             : ''
                         }
                       />
-                       <span className="sr-only">Add to cookbook</span>
+                       <span className="sr-only">{t('addToCookbook')}</span>
                     </Button>
                   )}
                 </div>
@@ -1246,7 +1249,7 @@ export default function RecipeSavvyPage() {
                   <div className="flex flex-col items-center justify-center gap-4 py-16">
                     <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
                     <p className="font-headline text-xl text-primary-foreground">
-                      Fetching delicious details...
+                      {t('fetchingDeliciousDetails')}
                     </p>
                   </div>
                 )}
@@ -1257,7 +1260,7 @@ export default function RecipeSavvyPage() {
                       onClick={() => handleSelectRecipe(selectedRecipe!)}
                       className="mt-4"
                     >
-                      Try Again
+                      {t('tryAgain')}
                     </Button>
                   </div>
                 )}
@@ -1268,20 +1271,20 @@ export default function RecipeSavvyPage() {
                           <div className="flex items-center gap-2">
                             <Salad className="h-4 w-4" />
                             <div>
-                              <strong>Prep:</strong> {recipeDetails.data.prepTime}
+                              <strong>{t('prep')}:</strong> {recipeDetails.data.prepTime}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
                             <div>
-                              <strong>Cook:</strong> {recipeDetails.data.cookTime}
+                              <strong>{t('cook')}:</strong> {recipeDetails.data.cookTime}
                             </div>
                           </div>
                           {totalCookTime > 0 && (
                             <div className="flex items-center gap-2 font-bold text-foreground">
                               <Timer className="h-4 w-4" />
                               <div>
-                                <strong>Total:</strong> {formatTotalTime(totalCookTime)}
+                                <strong>{t('total')}:</strong> {formatTotalTime(totalCookTime)}
                               </div>
                             </div>
                           )}
@@ -1291,13 +1294,13 @@ export default function RecipeSavvyPage() {
                           onClick={() => setIsVariationOpen(true)}
                         >
                             <Wand2 className="mr-2 h-4 w-4" />
-                            Make a variation
+                            {t('makeVariation')}
                         </Button>
                     </div>
 
                     <div>
                       <h3 className="font-headline text-xl mb-3 flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" /> Ingredients
+                        <BookOpen className="h-5 w-5" /> {t('ingredients')}
                       </h3>
                       <ul className="list-disc list-inside space-y-1 font-body columns-2">
                         {recipeDetails.data.ingredients.map((item, index) => (
@@ -1307,7 +1310,7 @@ export default function RecipeSavvyPage() {
                     </div>
                     <div>
                       <h3 className="font-headline text-xl mb-3 flex items-center gap-2">
-                        <ChefHat className="h-5 w-5" /> Instructions
+                        <ChefHat className="h-5 w-5" /> {t('instructions')}
                       </h3>
                       <ol className="list-decimal list-inside space-y-3 font-body">
                         {recipeDetails.data.instructions.map((step, index) => (
@@ -1327,7 +1330,7 @@ export default function RecipeSavvyPage() {
                     size="lg"
                     className="w-full"
                   >
-                    <ChefHat className="mr-2" /> Start Cooking
+                    <ChefHat className="mr-2" /> {t('startCooking')}
                   </Button>
                 </CardFooter>
               )}
@@ -1352,8 +1355,7 @@ export default function RecipeSavvyPage() {
                         {selectedRecipe}
                         </CardTitle>
                         <CardDescription>
-                        Step {currentStep + 1} of{' '}
-                        {recipeDetails.data!.instructions.length}
+                        {t('step')} {currentStep + 1} {t('of')} {recipeDetails.data!.instructions.length}
                         </CardDescription>
                     </div>
                     {timer.isActive && (
@@ -1391,7 +1393,7 @@ export default function RecipeSavvyPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={handleGenerateStepDescription} disabled={!!currentStepDescription?.isLoading || !!currentStepDescription?.data}>
                     <Eye className="mr-2" />
-                    What should it look like?
+                    {t('whatShouldItLookLike')}
                   </Button>
                   <Button
                     variant="outline"
@@ -1402,18 +1404,18 @@ export default function RecipeSavvyPage() {
                     }}
                   >
                     <AlertTriangle className="mr-2" />
-                    Something's wrong?
+                    {t('somethingsWrong')}
                   </Button>
                    {currentStepTimedInfo && !timer.isActive && (
                     <Button onClick={() => startTimer(currentStepTimedInfo.durationInMinutes)}>
                         <Timer className="mr-2" />
-                        Start Timer ({currentStepTimedInfo.durationInMinutes} min)
+                        {t('startTimer', { duration: currentStepTimedInfo.durationInMinutes })}
                     </Button>
                     )}
                     {isAlarmPlaying && (
                         <Button onClick={stopAlarm} variant="destructive">
                             <BellOff className="mr-2" />
-                            Stop Alarm
+                            {t('stopAlarm')}
                         </Button>
                     )}
                 </div>
@@ -1423,15 +1425,15 @@ export default function RecipeSavvyPage() {
                   onClick={() => setCurrentStep((s) => s - 1)}
                   disabled={currentStep === 0}
                 >
-                  <ChevronLeft className="mr-2" /> Previous Step
+                  <ChevronLeft className="mr-2" /> {t('previousStep')}
                 </Button>
                 {currentStep < recipeDetails.data!.instructions.length - 1 ? (
                   <Button onClick={() => setCurrentStep(s => s + 1)}>
-                    Next Step <ChevronRight className="ml-2" />
+                    {t('nextStep')} <ChevronRight className="ml-2" />
                   </Button>
                 ) : (
                   <Button onClick={handleDoneCooking} className="bg-green-600 hover:bg-green-700">
-                    I'm done!
+                    {t('imDone')}
                   </Button>
                 )}
               </CardFooter>
@@ -1452,15 +1454,15 @@ export default function RecipeSavvyPage() {
                     <div className="flex justify-center mb-4">
                       <PartyPopper className="h-16 w-16 text-accent" />
                     </div>
-                    <CardTitle className="font-headline text-4xl">Enjoy your meal!</CardTitle>
-                    <CardDescription className="pt-2">You successfully cooked {selectedRecipe}.</CardDescription>
+                    <CardTitle className="font-headline text-4xl">{t('enjoyYourMeal')}</CardTitle>
+                    <CardDescription className="pt-2">{t('successfullyCooked', { recipeName: selectedRecipe })}</CardDescription>
                   </CardHeader>
                   <CardContent className="mt-6">
-                    <h3 className="font-headline text-2xl mb-4">What's next?</h3>
+                    <h3 className="font-headline text-2xl mb-4">{t('whatsNext')}</h3>
                     {relatedRecipes.isLoading && (
                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
                            <LoaderCircle className="animate-spin h-5 w-5" />
-                           <span>Finding more recipes...</span>
+                           <span>{t('findingMoreRecipes')}</span>
                        </div>
                     )}
                     {relatedRecipes.error && <p className="text-destructive">{relatedRecipes.error}</p>}
@@ -1476,18 +1478,18 @@ export default function RecipeSavvyPage() {
 
                     <div className="flex items-center justify-center gap-4 my-6">
                         <Separator className="flex-1" />
-                        <span className="text-muted-foreground text-sm">OR</span>
+                        <span className="text-muted-foreground text-sm">{t('or')}</span>
                         <Separator className="flex-1" />
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Button onClick={handleRemake} size="lg">
                             <Repeat className="mr-2"/>
-                            Remake {selectedRecipe}
+                            {t('remakeRecipe', { recipeName: selectedRecipe })}
                         </Button>
                          <Button onClick={handleStartOver} size="lg" variant="secondary">
                             <Home className="mr-2"/>
-                            Back to Home
+                            {t('backToHome')}
                         </Button>
                     </div>
 
@@ -1510,7 +1512,7 @@ export default function RecipeSavvyPage() {
                   RecipeSavvy
                 </h1>
                 <p className="text-muted-foreground font-body">
-                  Turn your ingredients into delicious meals.
+                  {t('appSubtitle')}
                 </p>
               </div>
             </button>
@@ -1525,11 +1527,11 @@ export default function RecipeSavvyPage() {
                 }}
               >
                 <BookHeart />
-                <span className="sr-only">My Cookbook</span>
+                <span className="sr-only">{t('myCookbook')}</span>
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
                 <Settings />
-                <span className="sr-only">Settings</span>
+                <span className="sr-only">{t('settings')}</span>
               </Button>
             </div>
           </div>
@@ -1544,7 +1546,7 @@ export default function RecipeSavvyPage() {
         </main>
 
         <footer className="text-center py-4 text-muted-foreground text-sm">
-          <p>Built by TheVibecoder</p>
+          <p>{t('footer')}</p>
         </footer>
       </div>
 
@@ -1591,18 +1593,18 @@ export default function RecipeSavvyPage() {
       <Dialog open={isTroubleshootDialogOpen} onOpenChange={setIsTroubleshootDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Something wrong?</DialogTitle>
+                <DialogTitle>{t('somethingsWrong')}</DialogTitle>
                 <DialogDescription>
-                    Describe what's happening, and our AI chef will try to help you.
+                    {t('describeTheProblem')}
                 </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
                  <div className="p-4 bg-muted rounded-md">
-                   <p className="font-semibold text-sm">Current Step:</p>
+                   <p className="font-semibold text-sm">{t('currentStep')}:</p>
                    <p className="text-sm text-muted-foreground">{recipeDetails.data?.instructions[currentStep]}</p>
                  </div>
                  <Textarea 
-                    placeholder="e.g., 'My sauce is too thin' or 'I burned the onions!'"
+                    placeholder={t('troubleshootPlaceholder')}
                     value={troubleshootQuery}
                     onChange={(e) => setTroubleshootQuery(e.target.value)} 
                     rows={4}
@@ -1610,7 +1612,7 @@ export default function RecipeSavvyPage() {
                  {troubleshootingAdvice.isLoading && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <LoaderCircle className="animate-spin h-4 w-4" />
-                        Getting advice...
+                        {t('gettingAdvice')}...
                     </div>
                  )}
                  {troubleshootingAdvice.error && (
@@ -1618,17 +1620,17 @@ export default function RecipeSavvyPage() {
                  )}
                  {troubleshootingAdvice.data && (
                     <div className="p-4 bg-primary/10 rounded-md border border-primary/20 space-y-2">
-                        <h4 className="font-semibold">Chef's Advice:</h4>
+                        <h4 className="font-semibold">{t('chefsAdvice')}:</h4>
                         <p className="text-sm">{troubleshootingAdvice.data}</p>
                     </div>
                  )}
             </div>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button variant="ghost">Cancel</Button>
+                    <Button variant="ghost">{t('cancel')}</Button>
                 </DialogClose>
                 <Button onClick={handleTroubleshoot} disabled={!troubleshootQuery || troubleshootingAdvice.isLoading}>
-                    Get Help
+                    {t('getHelp')}
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -1637,9 +1639,9 @@ export default function RecipeSavvyPage() {
       <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setIsConfirmDeleteDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                      This will permanently remove "{recipeToDelete}" from your cookbook.
+                      {t('confirmRemoveCookbook', { recipeName: recipeToDelete })}
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="flex items-center space-x-2">
@@ -1648,11 +1650,11 @@ export default function RecipeSavvyPage() {
                     checked={dontAskAgain} 
                     onCheckedChange={(checked) => setDontAskAgain(checked as boolean)}
                   />
-                  <Label htmlFor="dont-ask-again">Don't ask me again for 5 days</Label>
+                  <Label htmlFor="dont-ask-again">{t('dontAskAgain')}</Label>
               </div>
               <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setRecipeToDelete(null)}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmRemove}>Continue</AlertDialogAction>
+                  <AlertDialogCancel onClick={() => setRecipeToDelete(null)}>{t('cancel')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmRemove}>{t('continue')}</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>

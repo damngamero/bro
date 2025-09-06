@@ -14,10 +14,14 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff, Moon, Sun } from "lucide-react"
+import { Eye, EyeOff, Moon, Sun, Check, ChevronsUpDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
+import { languages } from "@/lib/i18n"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -32,10 +36,13 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, model, onModelChange }: SettingsDialogProps) {
   const { setTheme, theme } = useTheme()
+  const { t, i18n } = useTranslation();
   const [localApiKey, setLocalApiKey] = useState(apiKey || "");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const { toast } = useToast();
+
+  const [langPopoverOpen, setLangPopoverOpen] = useState(false);
 
   useEffect(() => {
     setLocalApiKey(apiKey || "");
@@ -47,34 +54,43 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
         localStorage.setItem("googleApiKey", localApiKey);
         onApiKeyChange(localApiKey);
         toast({
-            title: "Settings Saved",
-            description: "Your API key and preferences have been saved.",
+            title: t('settingsSaved'),
+            description: t('settingsSavedDescription'),
         });
     } else {
         localStorage.removeItem("googleApiKey");
         onApiKeyChange(null);
          toast({
-            title: "API Key Removed",
-            description: "Your API key has been removed.",
+            title: t('apiKeyRemoved'),
+            description: t('apiKeyRemovedDescription'),
         });
     }
     onOpenChange(false);
+  }
+
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode);
+    if (document.documentElement) {
+      document.documentElement.lang = langCode;
+      document.documentElement.dir = i18n.dir(langCode);
+    }
+    setLangPopoverOpen(false);
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
+          <DialogTitle>{t('settings')}</DialogTitle>
           <DialogDescription>
-            Manage your application settings here.
+            {t('manageSettings')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="api-key" className="text-right">
-                API Key
+                {t('apiKey')}
               </Label>
               <div className="col-span-3 relative">
                  <Input 
@@ -94,26 +110,26 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
                   onClick={() => setShowApiKey(s => !s)}
                 >
                   {showApiKey ? <EyeOff /> : <Eye />}
-                  <span className="sr-only">{showApiKey ? 'Hide API key' : 'Show API key'}</span>
+                  <span className="sr-only">{showApiKey ? t('hideApiKey') : t('showApiKey')}</span>
                 </Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground px-1 text-center col-span-4 -mt-2">
-              Get your Google AI API key from{" "}
+              {t('getApiKeyPrompt')}{" "}
               <a 
                   href="https://aistudio.google.com/app/apikey" 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="underline"
               >
-                  Google AI Studio
-              </a>. 
-              Your key is stored only in your browser and will be erased if you clear your browser's cache.
+                  {t('googleAiStudio')}
+              </a>.{" "}
+              {t('cacheWarningApiKey')}
             </p>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-             <Label className="text-right">Model</Label>
+             <Label className="text-right">{t('model')}</Label>
              <RadioGroup
                 value={model}
                 onValueChange={(value: string) => onModelChange(value as ModelId)}
@@ -132,7 +148,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">
-                Theme
+                {t('theme')}
             </Label>
              <div className="col-span-3 flex gap-2">
                 <Button variant={theme === 'light' ? 'default' : 'outline'} size="icon" onClick={() => setTheme("light")}>
@@ -143,9 +159,52 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
                 </Button>
             </div>
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">{t('language')}</Label>
+              <div className="col-span-3">
+                 <Popover open={langPopoverOpen} onOpenChange={setLangPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={langPopoverOpen}
+                        className="w-full justify-between"
+                      >
+                        {languages.find((lang) => lang.code === i18n.language)?.name || i18n.language}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder={t('searchLanguage')} />
+                        <CommandList>
+                          <CommandEmpty>{t('noLanguageFound')}</CommandEmpty>
+                          <CommandGroup>
+                            {languages.map((lang) => (
+                              <CommandItem
+                                key={lang.code}
+                                value={lang.name}
+                                onSelect={() => handleLanguageChange(lang.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    i18n.language === lang.code ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {lang.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+              </div>
+          </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleSave}>Save changes</Button>
+          <Button onClick={handleSave}>{t('saveChanges')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
