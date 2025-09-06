@@ -904,7 +904,7 @@ export default function RecipeSavvyPage() {
                     <CardDescription>
                         Save recipes you love to find them here later.
                         <br/>
-                        <span className="text-xs italic">(Saved in your browser)</span>
+                        <span className="text-xs italic">If you clear your browser cache, you lose your cookbook , so right em down</span>
                     </CardDescription>
                 </CardHeader>
             </Card>
