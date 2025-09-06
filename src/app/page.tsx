@@ -73,7 +73,8 @@ import {
   Wand2,
   Dices,
   Trash2,
-  Salad
+  Salad,
+  Undo2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -110,6 +111,12 @@ type CookbookRecipe = {
 
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
 
+type PreviousState = {
+    view: View;
+    recipeName: string | null;
+} | null;
+
+
 const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 8;
 const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
@@ -117,35 +124,8 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 export default function RecipeSavvyPage() {
-  const [viewHistory, setViewHistory] = useState<View[]>(['search']);
-  const currentView = viewHistory[viewHistory.length - 1];
-
-  const changeView = (newView: View) => {
-    setViewHistory(prev => [...prev, newView]);
-  };
-
-  const handleGoBack = () => {
-    if (viewHistory.length > 1) {
-      if (currentView === 'cooking') {
-        // Just go back to the details view, don't reset anything else
-        setViewHistory(prev => prev.slice(0, -1));
-        return;
-      }
-
-      if (currentView === 'details') {
-          // This is like handleBackToSearch but using history
-          const previousView = viewHistory[viewHistory.length - 2];
-          if(previousView === 'search') {
-            handleBackToSearch(true);
-          } else {
-            setViewHistory(prev => prev.slice(0, -1));
-          }
-          return;
-      }
-      
-      setViewHistory(prev => prev.slice(0, -1));
-    }
-  };
+  const [view, setView] = useState<View>('search');
+  const [previousState, setPreviousState] = useState<PreviousState>(null);
   
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [isIngredientsDialogOpen, setIsIngredientsDialogOpen] = useState(false);
@@ -222,7 +202,7 @@ export default function RecipeSavvyPage() {
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
 
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -236,11 +216,11 @@ export default function RecipeSavvyPage() {
     
     tipTimeoutRef.current = setTimeout(async () => {
         try {
-            const context: any = { view: currentView };
-            if (currentView === 'cooking' && selectedRecipe && recipeDetails.data) {
+            const context: any = { view: view };
+            if (view === 'cooking' && selectedRecipe && recipeDetails.data) {
                 context.recipeName = selectedRecipe;
                 context.step = recipeDetails.data.instructions[currentStep];
-            } else if (currentView === 'details' && selectedRecipe) {
+            } else if (view === 'details' && selectedRecipe) {
                 context.recipeName = selectedRecipe;
             }
 
@@ -270,7 +250,7 @@ export default function RecipeSavvyPage() {
         }
     }, TIP_INTERVAL_MS);
 
-  }, [apiKey, model, shownTips, tipCountLast30Min, toast, currentView, selectedRecipe, recipeDetails.data, currentStep]);
+  }, [apiKey, model, shownTips, tipCountLast30Min, toast, view, selectedRecipe, recipeDetails.data, currentStep]);
 
   useEffect(() => {
     // Reset the 30-minute tip counter every 30 minutes
@@ -421,13 +401,18 @@ export default function RecipeSavvyPage() {
     return true;
   }, [apiKey, toast]);
 
+  const clearPreviousState = () => {
+    setPreviousState(null);
+    dismiss('undo-toast');
+  }
 
   const handleSelectRecipe = useCallback(
     async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput }) => {
+      clearPreviousState();
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
-      changeView('details');
+      setView('details');
       setShowCookbook(false); 
       setRecipeName(''); // Clear recipe name search and suggestions
       setRecipeNameSuggestions([]);
@@ -508,6 +493,7 @@ export default function RecipeSavvyPage() {
 
 
   const handleGenerateRecipes = useCallback(async () => {
+    clearPreviousState();
     if (!ensureApiKey()) return;
     if (ingredients.length === 0) {
       toast({
@@ -588,17 +574,14 @@ export default function RecipeSavvyPage() {
   }, [generatedRecipes]);
 
   useEffect(() => {
-    if (currentView !== 'search' && topRef.current) {
+    if (view !== 'search' && topRef.current) {
       topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [currentView]);
+  }, [view]);
   
-  const handleBackToSearch = (fromGoBack = false) => {
-    if (!fromGoBack) {
-      setViewHistory(['search']);
-    } else {
-      setViewHistory(prev => prev.slice(0, -1));
-    }
+  const handleBackToSearch = () => {
+    clearPreviousState();
+    setView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setShowCookbook(false);
@@ -614,11 +597,23 @@ export default function RecipeSavvyPage() {
   };
 
   const handleStartOver = () => {
-    setViewHistory(['search']);
-    setIngredients([]);
-    setRecipeName('');
-    setRecipeNameSuggestions([]);
-    setGeneratedRecipes([]);
+    if (view !== 'search') {
+      setPreviousState({ view, recipeName: selectedRecipe });
+      toast({
+        id: 'undo-toast',
+        title: "Returned home",
+        description: "You can go back to where you were.",
+        action: (
+          <Button variant="outline" size="sm" onClick={handleRestoreState}>
+            <Undo2 className="mr-2" />
+            Undo
+          </Button>
+        ),
+        duration: 8000,
+      });
+    }
+    
+    setView('search');
     setSelectedRecipe(null);
     setShowCookbook(false);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
@@ -627,6 +622,19 @@ export default function RecipeSavvyPage() {
     setRelatedRecipes({ isLoading: false, data: null, error: null });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  
+  const handleRestoreState = () => {
+    if (previousState) {
+        handleSelectRecipe(previousState.recipeName!);
+        if (previousState.view === 'cooking') {
+            setTimeout(() => setView('cooking'), 100);
+        } else if(previousState.view === 'enjoy') {
+            setTimeout(() => setView('enjoy'), 100);
+        }
+    }
+    clearPreviousState();
+  };
+
 
   const toggleCookbookRecipe = (recipeName: string, recipeDetails?: RecipeDetailsOutput) => {
     const isInCookbook = cookbook.some(f => f.name === recipeName);
@@ -734,7 +742,7 @@ export default function RecipeSavvyPage() {
   };
   
   const handleDoneCooking = async () => {
-    changeView('enjoy');
+    setView('enjoy');
     if (!ensureApiKey() || !selectedRecipe) return;
     setRelatedRecipes({ isLoading: true, data: null, error: null });
     try {
@@ -747,7 +755,7 @@ export default function RecipeSavvyPage() {
   };
 
   const handleRemake = () => {
-    changeView('details');
+    setView('details');
     setCurrentStep(0);
     setStepDescriptionsCache({});
   }
@@ -888,7 +896,7 @@ export default function RecipeSavvyPage() {
       );
     }
     
-    switch (currentView) {
+    switch (view) {
       case 'search':
         const recipesToShow = showAllRecipes
           ? generatedRecipes
@@ -927,6 +935,7 @@ export default function RecipeSavvyPage() {
                 <Tabs
                   defaultValue="ingredients"
                   className="w-full"
+                  onValueChange={() => clearPreviousState()}
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="ingredients">By Ingredients</TabsTrigger>
@@ -1196,8 +1205,8 @@ export default function RecipeSavvyPage() {
             exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            <Button onClick={handleGoBack} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -1314,7 +1323,7 @@ export default function RecipeSavvyPage() {
               {recipeDetails.data && (
                 <CardFooter>
                   <Button
-                    onClick={() => changeView('cooking')}
+                    onClick={() => setView('cooking')}
                     size="lg"
                     className="w-full"
                   >
@@ -1335,9 +1344,6 @@ export default function RecipeSavvyPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-             <Button onClick={handleGoBack} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Details
-            </Button>
             <Card className="shadow-lg">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -1514,7 +1520,8 @@ export default function RecipeSavvyPage() {
                 size="icon"
                 onClick={() => {
                   setShowCookbook(true);
-                  setViewHistory(['search']);
+                  setView('search');
+                  clearPreviousState();
                 }}
               >
                 <BookHeart />
