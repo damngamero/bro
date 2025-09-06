@@ -35,6 +35,16 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -62,7 +72,9 @@ import {
   Lightbulb,
   Wand2,
   Dices,
-  Undo2
+  Undo2,
+  Trash2,
+  Salad
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -75,6 +87,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -114,6 +127,8 @@ type PreviousState = {
 const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 8;
 const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+
 
 export default function RecipeSavvyPage() {
   const [currentView, setCurrentView] = useState<View>('search');
@@ -188,6 +203,10 @@ export default function RecipeSavvyPage() {
   const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [previousState, setPreviousState] = useState<PreviousState | null>(null);
   const previousStateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
+  const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
 
   const { toast, dismiss } = useToast();
@@ -397,7 +416,6 @@ export default function RecipeSavvyPage() {
       setStepDescriptionsCache({});
       setCurrentView('details');
       setShowCookbook(false); 
-      setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
       setRecipeName(''); // Clear recipe name search and suggestions
       setRecipeNameSuggestions([]);
       clearPreviousState();
@@ -422,7 +440,7 @@ export default function RecipeSavvyPage() {
       }
       
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
-      if (cookbookRecipe) {
+      if (cookbookRecipe && !options?.restoredState) {
         const timedStepsResult = await identifyTimedSteps({
             instructions: cookbookRecipe.details.instructions,
             apiKey: apiKey!,
@@ -438,6 +456,7 @@ export default function RecipeSavvyPage() {
       }
 
       try {
+        setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
         const details = await generateRecipeDetails({
           recipeName,
           halalMode: isHalal,
@@ -594,7 +613,7 @@ export default function RecipeSavvyPage() {
   };
 
   const handleStartOver = () => {
-    if(currentView !== 'search') {
+    if(currentView !== 'search' && selectedRecipe) {
       const currentState: PreviousState = {
         view: currentView,
         recipeName: selectedRecipe,
@@ -652,21 +671,50 @@ export default function RecipeSavvyPage() {
   };
 
 
-  const toggleCookbookRecipe = (recipeName: string, recipeDetails: RecipeDetailsOutput) => {
-    const updatedCookbook = cookbook.some(f => f.name === recipeName)
-      ? cookbook.filter(f => f.name !== recipeName)
-      : [...cookbook, { name: recipeName, details: recipeDetails }];
-
-    setCookbook(updatedCookbook);
-    localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
-
-    toast({
-      title: cookbook.some(f => f.name === recipeName)
-        ? 'Removed from My Cookbook'
-        : 'Added to My Cookbook',
-      description: recipeName,
-    });
+  const toggleCookbookRecipe = (recipeName: string, recipeDetails?: RecipeDetailsOutput) => {
+    const isInCookbook = cookbook.some(f => f.name === recipeName);
+    
+    if (isInCookbook) {
+      const updatedCookbook = cookbook.filter(f => f.name !== recipeName)
+      setCookbook(updatedCookbook);
+      localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
+      toast({
+        title: 'Removed from My Cookbook',
+        description: recipeName,
+      });
+    } else if (recipeDetails) {
+      const updatedCookbook = [...cookbook, { name: recipeName, details: recipeDetails }];
+      setCookbook(updatedCookbook);
+      localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
+       toast({
+        title: 'Added to My Cookbook',
+        description: recipeName,
+      });
+    }
   };
+
+  const handleAttemptRemoveFromCookbook = (recipeName: string) => {
+    const confirmSettings = JSON.parse(localStorage.getItem('confirmDeleteCookbook') || '{}');
+    if (confirmSettings.dontAskAgain && (Date.now() - confirmSettings.timestamp < CONFIRM_DELETE_COOL_DOWN_MS)) {
+        toggleCookbookRecipe(recipeName);
+    } else {
+        setRecipeToDelete(recipeName);
+        setIsConfirmDeleteDialogOpen(true);
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    if (recipeToDelete) {
+        if (dontAskAgain) {
+            localStorage.setItem('confirmDeleteCookbook', JSON.stringify({ dontAskAgain: true, timestamp: Date.now() }));
+        }
+        toggleCookbookRecipe(recipeToDelete);
+    }
+    setIsConfirmDeleteDialogOpen(false);
+    setRecipeToDelete(null);
+    setDontAskAgain(false);
+  };
+
 
   const isInCookbook = (recipeName: string) => cookbook.some(f => f.name === recipeName);
 
@@ -784,6 +832,31 @@ export default function RecipeSavvyPage() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  const parseTime = (timeString: string): number => {
+      let totalMinutes = 0;
+      const hoursMatch = timeString.match(/(\d+)\s*hour/);
+      const minutesMatch = timeString.match(/(\d+)\s*minute/);
+
+      if (hoursMatch) totalMinutes += parseInt(hoursMatch[1], 10) * 60;
+      if (minutesMatch) totalMinutes += parseInt(minutesMatch[1], 10);
+      
+      return totalMinutes;
+  };
+
+  const formatTotalTime = (totalMinutes: number): string => {
+      if (totalMinutes === 0) return "";
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      let result = "";
+      if (hours > 0) result += `${hours} hour${hours > 1 ? 's' : ''} `;
+      if (minutes > 0) result += `${minutes} minute${minutes > 1 ? 's' : ''}`;
+      return result.trim();
+  };
+
+  const totalCookTime = recipeDetails.data
+    ? parseTime(recipeDetails.data.prepTime) + parseTime(recipeDetails.data.cookTime)
+    : 0;
+
   const currentStepTimedInfo = recipeDetails.timedSteps.find(ts => ts.step === currentStep + 1);
 
   const renderContent = () => {
@@ -804,9 +877,17 @@ export default function RecipeSavvyPage() {
           </h2>
 
           {cookbook.length === 0 ? (
-            <p className="text-center text-muted-foreground">
-              You haven't saved any recipes to your cookbook yet.
-            </p>
+            <Card className="text-center p-8 border-dashed">
+                <CardHeader>
+                    <div className="flex justify-center mb-4 text-muted-foreground">
+                        <BookHeart size={48} />
+                    </div>
+                    <CardTitle>Your Cookbook is Empty</CardTitle>
+                    <CardDescription>
+                        Save recipes you love to find them here later.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {cookbook.map(recipe => (
@@ -815,15 +896,31 @@ export default function RecipeSavvyPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  whileHover={{ scale: 1.03, y: -5 }}
+                  whileHover={{ y: -5 }}
+                  className="h-full"
                 >
                   <Card
-                    onClick={() => handleSelectRecipe(recipe.name)}
-                    className="cursor-pointer h-full flex flex-col justify-center items-center text-center p-6 shadow-md hover:shadow-xl transition-shadow duration-300"
+                    className="cursor-pointer h-full flex flex-col group shadow-md hover:shadow-xl transition-shadow duration-300"
                   >
-                    <CardTitle className="font-headline text-xl">
-                      {recipe.name}
-                    </CardTitle>
+                    <div className="flex-grow p-6 text-center flex items-center justify-center" onClick={() => handleSelectRecipe(recipe.name)}>
+                        <CardTitle className="font-headline text-xl">
+                            {recipe.name}
+                        </CardTitle>
+                    </div>
+                    <CardFooter className="p-2 border-t justify-end">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleAttemptRemoveFromCookbook(recipe.name);
+                            }}
+                        >
+                            <Trash2 size={18} />
+                            <span className="sr-only">Remove {recipe.name}</span>
+                        </Button>
+                    </CardFooter>
                   </Card>
                 </motion.div>
               ))}
@@ -1125,8 +1222,8 @@ export default function RecipeSavvyPage() {
             key="details-view"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ duration: 0.3 }}
+            exit={{ opacity: 0, x: '-100%' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to {generatedRecipes.length > 0 ? 'Results' : 'Search'}
@@ -1187,9 +1284,9 @@ export default function RecipeSavvyPage() {
                 {recipeDetails.data && (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
+                            <Salad className="h-4 w-4" />
                             <div>
                               <strong>Prep:</strong> {recipeDetails.data.prepTime}
                             </div>
@@ -1200,6 +1297,14 @@ export default function RecipeSavvyPage() {
                               <strong>Cook:</strong> {recipeDetails.data.cookTime}
                             </div>
                           </div>
+                          {totalCookTime > 0 && (
+                            <div className="flex items-center gap-2 font-bold text-foreground">
+                              <Timer className="h-4 w-4" />
+                              <div>
+                                <strong>Total:</strong> {formatTotalTime(totalCookTime)}
+                              </div>
+                            </div>
+                          )}
                         </div>
                          <Button
                           variant="outline"
@@ -1214,7 +1319,7 @@ export default function RecipeSavvyPage() {
                       <h3 className="font-headline text-xl mb-3 flex items-center gap-2">
                         <BookOpen className="h-5 w-5" /> Ingredients
                       </h3>
-                      <ul className="list-disc list-inside space-y-1 font-body">
+                      <ul className="list-disc list-inside space-y-1 font-body columns-2">
                         {recipeDetails.data.ingredients.map((item, index) => (
                           <li key={index}>{item}</li>
                         ))}
@@ -1548,6 +1653,29 @@ export default function RecipeSavvyPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setIsConfirmDeleteDialogOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This will permanently remove "{recipeToDelete}" from your cookbook.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="dont-ask-again" 
+                    checked={dontAskAgain} 
+                    onCheckedChange={(checked) => setDontAskAgain(checked as boolean)}
+                  />
+                  <Label htmlFor="dont-ask-again">Don't ask me again for 5 days</Label>
+              </div>
+              <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setRecipeToDelete(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmRemove}>Continue</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
