@@ -411,7 +411,22 @@ export default function RecipeSavvyPage() {
 
 
   const handleSelectRecipe = useCallback(
-    async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput }) => {
+    async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput, isRestored?: boolean }) => {
+      if (options?.isRestored) {
+        // If restoring state, just set the view and data. No fetching.
+        setCurrentView('details');
+        setSelectedRecipe(recipeName);
+        if (options.newDetails) {
+            const timedStepsResult = await identifyTimedSteps({
+                instructions: options.newDetails.instructions,
+                apiKey: apiKey!,
+                model,
+            });
+            setRecipeDetails({ isLoading: false, data: options.newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
+        }
+        return;
+      }
+
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
@@ -980,18 +995,14 @@ export default function RecipeSavvyPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1">
-                         <div className="flex gap-2 mb-4">
-                            <div
-                                onClick={() => isApiKeyMissing ? ensureApiKey(false) : setIsIngredientsDialogOpen(true)}
-                                className="flex-grow flex items-center gap-2 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-text"
-                            >
-                                <Plus />
-                                <span>Add ingredients...</span>
-                            </div>
-                            <Button type="button" size="icon" aria-label="Add ingredient" disabled={isApiKeyMissing} onClick={() => setIsIngredientsDialogOpen(true)}>
-                                <Plus />
-                            </Button>
-                        </div>
+                        <Button
+                            variant="outline"
+                            onClick={() => isApiKeyMissing ? ensureApiKey(false) : setIsIngredientsDialogOpen(true)}
+                            className="w-full justify-start h-auto py-3 text-muted-foreground font-normal mb-4"
+                        >
+                            <Plus className="mr-2" />
+                            <span>Add ingredients...</span>
+                        </Button>
                         <div className="flex flex-wrap gap-2">
                           {ingredients.map(ingredient => (
                             <Badge
@@ -1080,8 +1091,13 @@ export default function RecipeSavvyPage() {
                     <Input
                       id="max-cook-time"
                       type="number"
+                      min="0"
                       value={maxCookTime}
-                      onChange={e => setMaxCookTime(e.target.value)}
+                      onChange={e => {
+                          const value = e.target.value;
+                          if (parseInt(value, 10) < 0) return;
+                          setMaxCookTime(value)
+                      }}
                       className="w-24"
                       placeholder="e.g., 30"
                       disabled={isApiKeyMissing}
@@ -1688,5 +1704,3 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
-
-    
