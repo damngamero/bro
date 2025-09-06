@@ -903,6 +903,8 @@ export default function RecipeSavvyPage() {
                     <CardTitle>Your Cookbook is Empty</CardTitle>
                     <CardDescription>
                         Save recipes you love to find them here later.
+                        <br/>
+                        <span className="text-xs italic">(Saved in your browser)</span>
                     </CardDescription>
                 </CardHeader>
             </Card>

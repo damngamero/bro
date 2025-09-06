@@ -108,7 +108,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
               >
                   Google AI Studio
               </a>. 
-              Your key is stored only in your browser.
+              Your key is stored only in your browser and will be erased if you clear your browser's cache.
             </p>
           </div>
 

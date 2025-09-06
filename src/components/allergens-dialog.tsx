@@ -58,8 +58,8 @@ export function AllergensDialog({
         <DialogHeader>
           <DialogTitle>Manage Allergens</DialogTitle>
           <DialogDescription>
-            Select common allergens or add your own. We'll filter recipes based
-            on your selections.
+            Select common allergens or add your own. Selections are saved in
+            your browser and will be cleared if you clear your browser's cache.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
