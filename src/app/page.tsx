@@ -139,6 +139,7 @@ export default function RecipeSavvyPage() {
   const [isHalal, setIsHalal] = useState(false);
   const [useAllergens, setUseAllergens] = useState(false);
   const [allergens, setAllergens] = useState<string[]>([]);
+  const [maxCookTime, setMaxCookTime] = useState<string>('');
 
   const [generatedRecipes, setGeneratedRecipes] = useState<string[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
@@ -524,10 +525,12 @@ export default function RecipeSavvyPage() {
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
 
     try {
+      const time = parseInt(maxCookTime, 10);
       const result = await generateRecipesFromIngredients({
         ingredients,
         halalMode: isHalal,
         allergens: useAllergens ? allergens : undefined,
+        maxCookTime: isNaN(time) ? undefined : time,
         apiKey: apiKey!,
         model,
       });
@@ -549,7 +552,7 @@ export default function RecipeSavvyPage() {
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, useAllergens, allergens, apiKey, toast, ensureApiKey, model]);
+  }, [ingredients, isHalal, useAllergens, allergens, maxCookTime, apiKey, toast, ensureApiKey, model]);
 
   const handleSurpriseMe = useCallback(async () => {
     if (!ensureApiKey()) return;
@@ -952,7 +955,7 @@ export default function RecipeSavvyPage() {
                         Please set your Google AI API key in the settings to use the app.
                         <Button
                             variant="link"
-                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold"
+                            className="p-0 h-auto ml-2 text-black dark:text-white font-bold"
                             onClick={() => setIsSettingsOpen(true)}
                         >
                             Open Settings
@@ -1068,7 +1071,7 @@ export default function RecipeSavvyPage() {
                     </Card>
                   </TabsContent>
                 </Tabs>
-                <div className="flex items-center space-x-4 mt-4">
+                <div className="flex flex-wrap items-center space-x-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
                     <Label htmlFor="halal-mode">Halal Mode</Label>
@@ -1078,6 +1081,18 @@ export default function RecipeSavvyPage() {
                     <Button variant="link" className="p-0 h-auto" onClick={() => setIsAllergensOpen(true)}>
                       Allergens
                     </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="max-cook-time">Max Cook Time (min)</Label>
+                    <Input
+                      id="max-cook-time"
+                      type="number"
+                      value={maxCookTime}
+                      onChange={e => setMaxCookTime(e.target.value)}
+                      className="w-24"
+                      placeholder="e.g., 30"
+                      disabled={isApiKeyMissing}
+                    />
                   </div>
                 </div>
               </CardContent>
