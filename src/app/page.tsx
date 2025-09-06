@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, FormEvent, useRef, useEffect } from 'react';
@@ -13,6 +14,8 @@ import { generateRelatedRecipes } from '@/ai/flows/generate-related-recipes';
 import { identifyTimedSteps, type IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
 import { generateCookingTip } from '@/ai/flows/generate-cooking-tip';
 import { generateRandomRecipes } from '@/ai/flows/generate-random-recipes';
+import { suggestRecipes } from '@/ai/flows/suggest-recipes';
+import { useDebounce } from '@/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -64,12 +67,14 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { AllergensDialog } from '@/components/allergens-dialog';
+import { IngredientsDialog } from '@/components/ingredients-dialog';
 import { VariationDialog } from '@/components/variation-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { SuggestionsList } from '@/components/suggestions-list';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -114,7 +119,7 @@ export default function RecipeSavvyPage() {
   const [currentView, setCurrentView] = useState<View>('search');
   
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [newIngredient, setNewIngredient] = useState('');
+  const [isIngredientsDialogOpen, setIsIngredientsDialogOpen] = useState(false);
   const [recipeName, setRecipeName] = useState('');
   const [isHalal, setIsHalal] = useState(false);
   const [useAllergens, setUseAllergens] = useState(false);
@@ -126,6 +131,11 @@ export default function RecipeSavvyPage() {
   
   const [suggestedRecipes, setSuggestedRecipes] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(true);
+
+  const [recipeNameSuggestions, setRecipeNameSuggestions] = useState<string[]>([]);
+  const [isSuggestingRecipeNames, setIsSuggestingRecipeNames] = useState(false);
+  const debouncedRecipeName = useDebounce(recipeName, 300);
+
 
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
   const [recipeDetails, setRecipeDetails] = useState<RecipeDetailsState>({
@@ -301,6 +311,7 @@ export default function RecipeSavvyPage() {
   }, [scheduleNextTip]);
 
   const fetchSuggestions = async () => {
+    if (!apiKey) return;
     setIsGeneratingSuggestions(true);
     try {
       const { recipes } = await generateRandomRecipes({
@@ -315,6 +326,26 @@ export default function RecipeSavvyPage() {
       setIsGeneratingSuggestions(false);
     }
   };
+
+   useEffect(() => {
+    if (debouncedRecipeName.length > 2 && ensureApiKey(false)) {
+      setIsSuggestingRecipeNames(true);
+      suggestRecipes({
+        query: debouncedRecipeName,
+        apiKey: apiKey!,
+        model,
+      }).then(result => {
+        setRecipeNameSuggestions(result.suggestions);
+        setIsSuggestingRecipeNames(false);
+      }).catch(err => {
+        console.error("Failed to fetch recipe name suggestions:", err);
+        setIsSuggestingRecipeNames(false);
+      });
+    } else {
+      setRecipeNameSuggestions([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedRecipeName, apiKey, model]);
   
   const handleApiKeyChange = (newApiKey: string | null) => {
     setApiKey(newApiKey);
@@ -333,11 +364,9 @@ export default function RecipeSavvyPage() {
     localStorage.setItem('geminiModel', newModel);
   }
 
-  const handleAddIngredient = (e: FormEvent) => {
-    e.preventDefault();
-    if (newIngredient.trim() && !ingredients.includes(newIngredient.trim())) {
-      setIngredients([...ingredients, newIngredient.trim()]);
-      setNewIngredient('');
+  const handleAddIngredient = (ingredient: string) => {
+    if (ingredient.trim() && !ingredients.includes(ingredient.trim())) {
+      setIngredients([...ingredients, ingredient.trim()]);
     }
   };
 
@@ -362,27 +391,33 @@ export default function RecipeSavvyPage() {
 
 
   const handleSelectRecipe = useCallback(
-    async (recipeName: string, newDetails?: RecipeDetailsOutput, restoredDetails?: RecipeDetailsState) => {
+    async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput, fromCookbook?: boolean, restoredState?: PreviousState }) => {
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
       setCurrentView('details');
       setShowCookbook(false); 
       setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
+      setRecipeName(''); // Clear recipe name search and suggestions
+      setRecipeNameSuggestions([]);
       clearPreviousState();
 
-      if (restoredDetails) {
-        setRecipeDetails(restoredDetails);
+      if (options?.restoredState) {
+        setCurrentView(options.restoredState.view);
+        setRecipeDetails(options.restoredState.recipeDetails);
+        setCurrentStep(options.restoredState.currentStep);
+        setStepDescriptionsCache(options.restoredState.stepDescriptionsCache);
+        setRelatedRecipes(options.restoredState.relatedRecipes);
         return;
       }
-
-      if (newDetails) {
+      
+      if (options?.newDetails) {
         const timedStepsResult = await identifyTimedSteps({
-          instructions: newDetails.instructions,
+          instructions: options.newDetails.instructions,
           apiKey: apiKey!,
           model,
         });
-        setRecipeDetails({ isLoading: false, data: newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
+        setRecipeDetails({ isLoading: false, data: options.newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
         return;
       }
       
@@ -436,10 +471,9 @@ export default function RecipeSavvyPage() {
     [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model]
   );
   
-  const handleGetRecipe = useCallback(async (name?: string) => {
-    const recipeToGet = name || recipeName;
+  const handleGetRecipeFromName = useCallback(async () => {
     if (!ensureApiKey()) return;
-    if (!recipeToGet.trim()) {
+    if (!recipeName.trim()) {
       toast({
         variant: 'destructive',
         title: 'No Recipe Name',
@@ -447,7 +481,7 @@ export default function RecipeSavvyPage() {
       });
       return;
     }
-    handleSelectRecipe(recipeToGet);
+    handleSelectRecipe(recipeName);
   }, [recipeName, ensureApiKey, toast, handleSelectRecipe]);
 
 
@@ -596,8 +630,8 @@ export default function RecipeSavvyPage() {
 
     setCurrentView('search');
     setIngredients([]);
-    setNewIngredient('');
     setRecipeName('');
+    setRecipeNameSuggestions([]);
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowCookbook(false);
@@ -610,19 +644,13 @@ export default function RecipeSavvyPage() {
   
   const handleRestoreState = () => {
     if (previousState) {
-      setCurrentView(previousState.view);
-      setSelectedRecipe(previousState.recipeName);
-      if(previousState.view === 'details' && previousState.recipeName) {
-        setRecipeDetails(previousState.recipeDetails)
-      } else {
-        setRecipeDetails(previousState.recipeDetails);
-      }
-      setCurrentStep(previousState.currentStep);
-      setStepDescriptionsCache(previousState.stepDescriptionsCache);
-      setRelatedRecipes(previousState.relatedRecipes);
-      clearPreviousState();
+        if (previousState.recipeName) {
+            handleSelectRecipe(previousState.recipeName, { restoredState: previousState });
+        }
+        clearPreviousState();
     }
   };
+
 
   const toggleCookbookRecipe = (recipeName: string, recipeDetails: RecipeDetailsOutput) => {
     const updatedCookbook = cookbook.some(f => f.name === recipeName)
@@ -815,7 +843,7 @@ export default function RecipeSavvyPage() {
             key="search-view"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, x: '-100%' }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
             {isApiKeyMissing && (
@@ -858,20 +886,18 @@ export default function RecipeSavvyPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1">
-                        <form onSubmit={handleAddIngredient} className="flex gap-2 mb-4">
-                          <Input
-                            type="text"
-                            value={newIngredient}
-                            onChange={e => setNewIngredient(e.target.value)}
-                            onClick={() => isApiKeyMissing && ensureApiKey(false)}
-                            placeholder="e.g., Chicken breast"
-                            className="flex-grow"
-                            disabled={isApiKeyMissing}
-                          />
-                          <Button type="submit" size="icon" aria-label="Add ingredient" disabled={isApiKeyMissing}>
-                            <Plus />
-                          </Button>
-                        </form>
+                         <div className="flex gap-2 mb-4">
+                            <div
+                                onClick={() => isApiKeyMissing ? ensureApiKey(false) : setIsIngredientsDialogOpen(true)}
+                                className="flex-grow flex items-center gap-2 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 cursor-text"
+                            >
+                                <Plus />
+                                <span>Add ingredients...</span>
+                            </div>
+                            <Button type="button" size="icon" aria-label="Add ingredient" disabled={isApiKeyMissing} onClick={() => setIsIngredientsDialogOpen(true)}>
+                                <Plus />
+                            </Button>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {ingredients.map(ingredient => (
                             <Badge
@@ -903,11 +929,11 @@ export default function RecipeSavvyPage() {
                           Enter the name of the recipe you'd like to find.
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="px-1">
+                      <CardContent className="px-1 relative">
                         <form
                           onSubmit={e => {
                             e.preventDefault();
-                            handleGetRecipe();
+                            handleGetRecipeFromName();
                           }}
                           className="flex gap-2"
                         >
@@ -919,8 +945,27 @@ export default function RecipeSavvyPage() {
                             placeholder="e.g., Chicken Alfredo"
                             className="flex-grow"
                             disabled={isApiKeyMissing}
+                            autoComplete="off"
                           />
                         </form>
+                         <AnimatePresence>
+                         {recipeName.length > 2 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute top-full left-0 right-0 z-10 mt-2"
+                            >
+                                <SuggestionsList
+                                    suggestions={recipeNameSuggestions}
+                                    isLoading={isSuggestingRecipeNames}
+                                    onSelect={(suggestion) => {
+                                        handleSelectRecipe(suggestion);
+                                    }}
+                                />
+                            </motion.div>
+                         )}
+                        </AnimatePresence>
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1435,6 +1480,13 @@ export default function RecipeSavvyPage() {
         allergens={allergens}
         onAllergensChange={setAllergens}
       />
+
+       <IngredientsDialog
+        isOpen={isIngredientsDialogOpen}
+        onOpenChange={setIsIngredientsDialogOpen}
+        selectedIngredients={ingredients}
+        onIngredientsChange={setIngredients}
+      />
       
       {selectedRecipe && recipeDetails.data && (
         <VariationDialog
@@ -1445,7 +1497,7 @@ export default function RecipeSavvyPage() {
           apiKey={apiKey}
           model={model}
           onVariationCreated={(newName, newDetails) => {
-            handleSelectRecipe(newName, newDetails);
+            handleSelectRecipe(newName, { newDetails: newDetails as RecipeDetailsOutput });
             setIsVariationOpen(false);
           }}
         />
@@ -1499,5 +1551,3 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
-
-    
