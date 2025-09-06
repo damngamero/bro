@@ -146,7 +146,7 @@ export default function RecipeSavvyPage() {
 
   const [recipeNameSuggestions, setRecipeNameSuggestions] = useState<string[]>([]);
   const [isSuggestingRecipeNames, setIsSuggestingRecipeNames] = useState(false);
-  const debouncedRecipeName = useDebounce(recipeName, 300);
+  const debouncedRecipeName = useDebounce(recipeName, 3000);
 
 
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
@@ -1345,14 +1345,14 @@ export default function RecipeSavvyPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                    <div>
+                    <button onClick={() => setView('details')} className="text-left hover:underline">
                         <CardTitle className="font-headline text-3xl">
                         {selectedRecipe}
                         </CardTitle>
                         <CardDescription>
                         {t('step')} {currentStep + 1} {t('of')} {recipeDetails.data!.instructions.length}
                         </CardDescription>
-                    </div>
+                    </button>
                     {timer.isActive && (
                         <div className="text-2xl font-mono bg-muted px-4 py-2 rounded-lg">
                             {formatTime(timer.remaining)}

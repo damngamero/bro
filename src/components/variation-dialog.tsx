@@ -47,6 +47,7 @@ export function VariationDialog({
   const { t } = useTranslation();
   const [excludeIngredients, setExcludeIngredients] = useState<string[]>([])
   const [addons, setAddons] = useState<string>("")
+  const [unavailableEquipment, setUnavailableEquipment] = useState("");
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -66,7 +67,7 @@ export function VariationDialog({
       })
       return
     }
-    if (excludeIngredients.length === 0 && !addons.trim()) {
+    if (excludeIngredients.length === 0 && !addons.trim() && !unavailableEquipment.trim()) {
         toast({
             variant: "destructive",
             title: t('noChangesRequested'),
@@ -81,6 +82,7 @@ export function VariationDialog({
         recipeName,
         ingredientsToExclude: excludeIngredients,
         addons: addons.split(',').map(a => a.trim()).filter(Boolean),
+        unavailableEquipment: unavailableEquipment.split(',').map(e => e.trim()).filter(Boolean),
         apiKey,
         model,
       })
@@ -155,6 +157,21 @@ export function VariationDialog({
               value={addons}
               onChange={(e) => setAddons(e.target.value)}
               placeholder={t('addonsPlaceholder')}
+            />
+          </div>
+           <Separator />
+          <div>
+            <Label htmlFor="unavailable-equipment" className="text-base font-medium">
+              Unavailable Equipment
+            </Label>
+             <p className="text-sm text-muted-foreground pb-2">
+              Tell us what equipment you don't have, and we'll try to adapt the recipe.
+            </p>
+            <Input
+              id="unavailable-equipment"
+              value={unavailableEquipment}
+              onChange={(e) => setUnavailableEquipment(e.target.value)}
+              placeholder="e.g., Oven, microwave, stand mixer..."
             />
           </div>
         </div>
