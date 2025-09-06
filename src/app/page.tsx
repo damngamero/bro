@@ -68,7 +68,6 @@ import {
   Repeat,
   Home,
   Timer,
-  BellOff,
   Lightbulb,
   Wand2,
   Dices,
@@ -192,8 +191,6 @@ export default function RecipeSavvyPage() {
     remaining: number;
     duration: number;
   }>({ isActive: false, remaining: 0, duration: 0 });
-  const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
-  const alarmRef = useRef<HTMLAudioElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [shownTips, setShownTips] = useState<string[]>([]);
@@ -768,10 +765,11 @@ export default function RecipeSavvyPage() {
       timerIntervalRef.current = setInterval(() => {
         setTimer(t => ({ ...t, remaining: t.remaining - 1 }));
       }, 1000);
-    } else if (timer.isActive && timer.remaining === 0) {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      setIsAlarmPlaying(true);
-      alarmRef.current?.play();
+    } else if (timer.isActive && timer.remaining <= 0) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -786,10 +784,7 @@ export default function RecipeSavvyPage() {
     });
   };
 
-  const stopAlarm = () => {
-    setIsAlarmPlaying(false);
-    alarmRef.current?.pause();
-    if(alarmRef.current) alarmRef.current.currentTime = 0;
+  const stopTimer = () => {
     setTimer({ isActive: false, remaining: 0, duration: 0 });
   };
 
@@ -1412,10 +1407,9 @@ export default function RecipeSavvyPage() {
                         {t('startTimer', { duration: currentStepTimedInfo.durationInMinutes })}
                     </Button>
                     )}
-                    {isAlarmPlaying && (
-                        <Button onClick={stopAlarm} variant="destructive">
-                            <BellOff className="mr-2" />
-                            {t('stopAlarm')}
+                    {timer.isActive && timer.remaining <= 0 && (
+                        <Button onClick={stopTimer} variant="destructive">
+                            {t('stopTimer')}
                         </Button>
                     )}
                 </div>
@@ -1549,8 +1543,6 @@ export default function RecipeSavvyPage() {
           <p>{t('footer')}</p>
         </footer>
       </div>
-
-      <audio ref={alarmRef} src="/alarm.mp3" loop />
 
       <SettingsDialog
         isOpen={isSettingsOpen}
