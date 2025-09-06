@@ -411,6 +411,17 @@ export default function RecipeSavvyPage() {
 
   const handleSelectRecipe = useCallback(
     async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput, fromCookbook?: boolean, restoredState?: PreviousState }) => {
+      if (options?.restoredState) {
+        setSelectedRecipe(options.restoredState.recipeName);
+        setCurrentView(options.restoredState.view);
+        setRecipeDetails(options.restoredState.recipeDetails);
+        setCurrentStep(options.restoredState.currentStep);
+        setStepDescriptionsCache(options.restoredState.stepDescriptionsCache);
+        setRelatedRecipes(options.restoredState.relatedRecipes);
+        clearPreviousState();
+        return;
+      }
+      
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
@@ -420,15 +431,6 @@ export default function RecipeSavvyPage() {
       setRecipeNameSuggestions([]);
       clearPreviousState();
 
-      if (options?.restoredState) {
-        setCurrentView(options.restoredState.view);
-        setRecipeDetails(options.restoredState.recipeDetails);
-        setCurrentStep(options.restoredState.currentStep);
-        setStepDescriptionsCache(options.restoredState.stepDescriptionsCache);
-        setRelatedRecipes(options.restoredState.relatedRecipes);
-        return;
-      }
-      
       if (options?.newDetails) {
         const timedStepsResult = await identifyTimedSteps({
           instructions: options.newDetails.instructions,
@@ -666,7 +668,6 @@ export default function RecipeSavvyPage() {
         if (previousState.recipeName) {
             handleSelectRecipe(previousState.recipeName, { restoredState: previousState });
         }
-        clearPreviousState();
     }
   };
 
@@ -951,7 +952,7 @@ export default function RecipeSavvyPage() {
                         Please set your Google AI API key in the settings to use the app.
                         <Button
                             variant="link"
-                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold text-black"
+                            className="p-0 h-auto ml-2 text-destructive-foreground font-bold"
                             onClick={() => setIsSettingsOpen(true)}
                         >
                             Open Settings
@@ -1222,7 +1223,7 @@ export default function RecipeSavvyPage() {
             key="details-view"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '-100%' }}
+            exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
