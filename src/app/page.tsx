@@ -119,8 +119,8 @@ type PreviousState = {
 
 
 const MAX_TIPS = 25;
-const MAX_TIPS_IN_30_MIN = 8;
-const TIP_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+const MAX_TIPS_IN_30_MIN = 3;
+const TIP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
