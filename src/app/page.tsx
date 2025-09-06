@@ -336,7 +336,7 @@ export default function RecipeSavvyPage() {
     try {
       const { recipes } = await generateRandomRecipes({
         count: 2,
-        apiKey: apiKey ?? undefined,
+        apiKey: apiKey,
         model,
       });
       setSuggestedRecipes(recipes);
@@ -412,19 +412,16 @@ export default function RecipeSavvyPage() {
 
   const handleSelectRecipe = useCallback(
     async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput, isRestored?: boolean }) => {
-      if (options?.isRestored) {
-        // If restoring state, just set the view and data. No fetching.
-        setCurrentView('details');
-        setSelectedRecipe(recipeName);
-        if (options.newDetails) {
-            const timedStepsResult = await identifyTimedSteps({
-                instructions: options.newDetails.instructions,
-                apiKey: apiKey!,
-                model,
-            });
-            setRecipeDetails({ isLoading: false, data: options.newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
-        }
-        return;
+      if (options?.isRestored && options?.newDetails) {
+          setCurrentView('details');
+          setSelectedRecipe(recipeName);
+          const timedStepsResult = await identifyTimedSteps({
+              instructions: options.newDetails.instructions,
+              apiKey: apiKey!,
+              model,
+          });
+          setRecipeDetails({ isLoading: false, data: options.newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
+          return;
       }
 
       setSelectedRecipe(recipeName);
@@ -605,6 +602,16 @@ export default function RecipeSavvyPage() {
   };
 
   const handleBackToSearch = () => {
+    if (previousState && previousState.recipeName) {
+        handleSelectRecipe(previousState.recipeName, { isRestored: true, newDetails: previousState.recipeDetails.data! });
+        setCurrentView(previousState.view);
+        setCurrentStep(previousState.currentStep);
+        setStepDescriptionsCache(previousState.stepDescriptionsCache);
+        setRelatedRecipes(previousState.relatedRecipes);
+        clearPreviousState();
+        return;
+    }
+
     setCurrentView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
@@ -671,10 +678,9 @@ export default function RecipeSavvyPage() {
   };
   
   const handleRestoreState = () => {
-    if (previousState) {
+    if (previousState && previousState.recipeName) {
+        handleSelectRecipe(previousState.recipeName, { isRestored: true, newDetails: previousState.recipeDetails.data! });
         setCurrentView(previousState.view);
-        setSelectedRecipe(previousState.recipeName);
-        setRecipeDetails(previousState.recipeDetails);
         setCurrentStep(previousState.currentStep);
         setStepDescriptionsCache(previousState.stepDescriptionsCache);
         setRelatedRecipes(previousState.relatedRecipes);
@@ -1465,7 +1471,7 @@ export default function RecipeSavvyPage() {
               </CardContent>
               <CardFooter className="flex justify-between">
                 <Button
-                  onClick={() => setCurrentStep(s => s - 1)}
+                  onClick={() => setCurrentStep((s) => s - 1)}
                   disabled={currentStep === 0}
                 >
                   <ChevronLeft className="mr-2" /> Previous Step
