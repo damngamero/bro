@@ -125,7 +125,8 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 export default function RecipeSavvyPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<View>('search');
   const [previousState, setPreviousState] = useState<PreviousState>(null);
   
@@ -205,6 +206,10 @@ export default function RecipeSavvyPage() {
   const { toast, dismiss } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const scheduleNextTip = useCallback(() => {
     if (tipTimeoutRef.current) {
@@ -820,6 +825,10 @@ export default function RecipeSavvyPage() {
     : 0;
 
   const currentStepTimedInfo = recipeDetails.timedSteps.find(ts => ts.step === currentStep + 1);
+  
+  if (!isMounted) {
+    return null;
+  }
 
   const renderContent = () => {
     if (showCookbook) {
