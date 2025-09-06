@@ -117,7 +117,35 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 export default function RecipeSavvyPage() {
-  const [currentView, setCurrentView] = useState<View>('search');
+  const [viewHistory, setViewHistory] = useState<View[]>(['search']);
+  const currentView = viewHistory[viewHistory.length - 1];
+
+  const changeView = (newView: View) => {
+    setViewHistory(prev => [...prev, newView]);
+  };
+
+  const handleGoBack = () => {
+    if (viewHistory.length > 1) {
+      if (currentView === 'cooking') {
+        // Just go back to the details view, don't reset anything else
+        setViewHistory(prev => prev.slice(0, -1));
+        return;
+      }
+
+      if (currentView === 'details') {
+          // This is like handleBackToSearch but using history
+          const previousView = viewHistory[viewHistory.length - 2];
+          if(previousView === 'search') {
+            handleBackToSearch(true);
+          } else {
+            setViewHistory(prev => prev.slice(0, -1));
+          }
+          return;
+      }
+      
+      setViewHistory(prev => prev.slice(0, -1));
+    }
+  };
   
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [isIngredientsDialogOpen, setIsIngredientsDialogOpen] = useState(false);
@@ -399,7 +427,7 @@ export default function RecipeSavvyPage() {
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
-      setCurrentView('details');
+      changeView('details');
       setShowCookbook(false); 
       setRecipeName(''); // Clear recipe name search and suggestions
       setRecipeNameSuggestions([]);
@@ -565,8 +593,12 @@ export default function RecipeSavvyPage() {
     }
   }, [currentView]);
   
-  const handleBackToSearch = () => {
-    setCurrentView('search');
+  const handleBackToSearch = (fromGoBack = false) => {
+    if (!fromGoBack) {
+      setViewHistory(['search']);
+    } else {
+      setViewHistory(prev => prev.slice(0, -1));
+    }
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setShowCookbook(false);
@@ -582,7 +614,7 @@ export default function RecipeSavvyPage() {
   };
 
   const handleStartOver = () => {
-    setCurrentView('search');
+    setViewHistory(['search']);
     setIngredients([]);
     setRecipeName('');
     setRecipeNameSuggestions([]);
@@ -702,7 +734,7 @@ export default function RecipeSavvyPage() {
   };
   
   const handleDoneCooking = async () => {
-    setCurrentView('enjoy');
+    changeView('enjoy');
     if (!ensureApiKey() || !selectedRecipe) return;
     setRelatedRecipes({ isLoading: true, data: null, error: null });
     try {
@@ -715,7 +747,7 @@ export default function RecipeSavvyPage() {
   };
 
   const handleRemake = () => {
-    setCurrentView('details');
+    changeView('details');
     setCurrentStep(0);
     setStepDescriptionsCache({});
   }
@@ -1164,8 +1196,8 @@ export default function RecipeSavvyPage() {
             exit={{ opacity: 0, x: '100%' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
+            <Button onClick={handleGoBack} variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -1282,7 +1314,7 @@ export default function RecipeSavvyPage() {
               {recipeDetails.data && (
                 <CardFooter>
                   <Button
-                    onClick={() => setCurrentView('cooking')}
+                    onClick={() => changeView('cooking')}
                     size="lg"
                     className="w-full"
                   >
@@ -1303,6 +1335,9 @@ export default function RecipeSavvyPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
+             <Button onClick={handleGoBack} variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Details
+            </Button>
             <Card className="shadow-lg">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -1479,7 +1514,7 @@ export default function RecipeSavvyPage() {
                 size="icon"
                 onClick={() => {
                   setShowCookbook(true);
-                  setCurrentView('search');
+                  setViewHistory(['search']);
                 }}
               >
                 <BookHeart />
