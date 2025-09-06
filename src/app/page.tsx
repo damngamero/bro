@@ -235,7 +235,7 @@ export default function RecipeSavvyPage() {
             const { tip } = await generateCookingTip({ 
                 previousTips: shownTips, 
                 context,
-                apiKey, 
+                apiKey: apiKey!, 
                 model 
             });
             setShownTips(prev => [...prev, tip]);
@@ -411,18 +411,7 @@ export default function RecipeSavvyPage() {
 
 
   const handleSelectRecipe = useCallback(
-    async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput, fromCookbook?: boolean, restoredState?: PreviousState }) => {
-      if (options?.restoredState) {
-        setSelectedRecipe(options.restoredState.recipeName);
-        setCurrentView(options.restoredState.view);
-        setRecipeDetails(options.restoredState.recipeDetails);
-        setCurrentStep(options.restoredState.currentStep);
-        setStepDescriptionsCache(options.restoredState.stepDescriptionsCache);
-        setRelatedRecipes(options.restoredState.relatedRecipes);
-        clearPreviousState();
-        return;
-      }
-      
+    async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput }) => {
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
@@ -443,7 +432,7 @@ export default function RecipeSavvyPage() {
       }
       
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
-      if (cookbookRecipe && !options?.restoredState) {
+      if (cookbookRecipe) {
         const timedStepsResult = await identifyTimedSteps({
             instructions: cookbookRecipe.details.instructions,
             apiKey: apiKey!,
@@ -668,9 +657,13 @@ export default function RecipeSavvyPage() {
   
   const handleRestoreState = () => {
     if (previousState) {
-        if (previousState.recipeName) {
-            handleSelectRecipe(previousState.recipeName, { restoredState: previousState });
-        }
+        setCurrentView(previousState.view);
+        setSelectedRecipe(previousState.recipeName);
+        setRecipeDetails(previousState.recipeDetails);
+        setCurrentStep(previousState.currentStep);
+        setStepDescriptionsCache(previousState.stepDescriptionsCache);
+        setRelatedRecipes(previousState.relatedRecipes);
+        clearPreviousState();
     }
   };
 
@@ -1695,3 +1688,5 @@ export default function RecipeSavvyPage() {
     </>
   );
 }
+
+    
