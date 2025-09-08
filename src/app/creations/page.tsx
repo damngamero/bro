@@ -17,7 +17,7 @@ const creations = [
         title: 'RecipeSavvy',
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
         link: 'https://recipesavvy.vercel.app/',
-        image: 'https://i.ibb.co/bBQrTjL/recipe-savvy.png',
+        image: 'https://images.unsplash.com/photo-1595295333158-4742f28fbd85?q=80&w=1780&auto=format&fit=crop',
         external: true,
     },
 ]
@@ -40,13 +40,12 @@ export default function CreationsPage() {
                 <div className="grid gap-8">
                     {creations.map((creation) => (
                         <Card key={creation.title} className="overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                             <div className="aspect-video bg-muted flex items-center justify-center">
+                             <div className="aspect-video bg-muted flex items-center justify-center relative">
                                 <Image 
                                     src={creation.image} 
                                     alt={`${creation.title} screenshot`}
-                                    width={1280}
-                                    height={720}
-                                    className="object-contain w-full h-full p-8"
+                                    fill
+                                    className="object-cover"
                                     data-ai-hint="website ui screenshot"
                                 />
                             </div>
@@ -55,7 +54,7 @@ export default function CreationsPage() {
                                 <CardDescription>{creation.description}</CardDescription>
                             </CardHeader>
                             <CardFooter>
-                                <a href={creation.link} target={creation.external ? '_blank' : '_self'} rel="noopener noreferrer" className="w-full">
+                                <a href={creation.link} target={!creation.external ? '_self' : '_blank'} rel="noopener noreferrer" className="w-full">
                                     <Button className="w-full">
                                         Go to App
                                         {creation.external && <ArrowUpRight className="ml-2 h-4 w-4" />}
