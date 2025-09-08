@@ -61,7 +61,6 @@ import {
   Dices,
   Trash2,
   Salad,
-  Undo2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -99,12 +98,6 @@ type CookbookRecipe = {
 
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
 
-type PreviousState = {
-    view: View;
-    recipeName: string | null;
-} | null;
-
-
 const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 3;
 const TIP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -114,7 +107,6 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 function RecipeSavvyContent() {
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<View>('search');
-  const [previousState, setPreviousState] = useState<PreviousState>(null);
   
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [isIngredientsDialogOpen, setIsIngredientsDialogOpen] = useState(false);
@@ -189,7 +181,7 @@ function RecipeSavvyContent() {
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
 
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   
@@ -411,14 +403,8 @@ function RecipeSavvyContent() {
     return true;
   }, [apiKey, toast]);
 
-  const clearPreviousState = () => {
-    setPreviousState(null);
-    dismiss('undo-toast');
-  }
-
   const handleSelectRecipe = useCallback(
     async (recipeName: string, options?: { newDetails?: RecipeDetailsOutput }) => {
-      clearPreviousState();
       setSelectedRecipe(recipeName);
       setCurrentStep(0);
       setStepDescriptionsCache({});
@@ -527,7 +513,6 @@ function RecipeSavvyContent() {
 
 
   const handleGenerateRecipes = useCallback(async () => {
-    clearPreviousState();
     if (!ensureApiKey()) return;
     if (ingredients.length === 0) {
       toast({
@@ -632,7 +617,6 @@ function RecipeSavvyContent() {
   }, [view]);
   
   const handleBackToSearch = () => {
-    clearPreviousState();
     setView('search');
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
@@ -649,22 +633,6 @@ function RecipeSavvyContent() {
   };
 
   const handleStartOver = () => {
-    if (view !== 'search') {
-      setPreviousState({ view, recipeName: selectedRecipe });
-      toast({
-        id: 'undo-toast',
-        title: 'Returned Home',
-        description: 'You can go back to where you were.',
-        action: (
-          <Button variant="outline" size="sm" onClick={handleRestoreState}>
-            <Undo2 className="mr-2" />
-            Undo
-          </Button>
-        ),
-        duration: 8000,
-      });
-    }
-    
     setView('search');
     setSelectedRecipe(null);
     setShowCookbook(false);
@@ -675,18 +643,6 @@ function RecipeSavvyContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
-  const handleRestoreState = () => {
-    if (previousState) {
-        handleSelectRecipe(previousState.recipeName!);
-        if (previousState.view === 'cooking') {
-            setTimeout(() => setView('cooking'), 100);
-        } else if(previousState.view === 'enjoy') {
-            setTimeout(() => setView('enjoy'), 100);
-        }
-    }
-    clearPreviousState();
-  };
-
 
   const toggleCookbookRecipe = (recipeName: string, recipeDetails?: RecipeDetailsOutput) => {
     const isInCookbook = cookbook.some(f => f.name === recipeName);
@@ -1010,7 +966,6 @@ function RecipeSavvyContent() {
                 <Tabs
                   defaultValue="ingredients"
                   className="w-full"
-                  onValueChange={() => clearPreviousState()}
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="ingredients">By Ingredients</TabsTrigger>
@@ -1164,6 +1119,7 @@ function RecipeSavvyContent() {
                     onClick={() => {
                         setIngredients([]);
                         setRecipeName('');
+                        setGeneratedRecipes([]);
                     }}
                     variant="ghost"
                     className="w-full sm:w-auto"
@@ -1594,7 +1550,6 @@ function RecipeSavvyContent() {
                 onClick={() => {
                   setShowCookbook(true);
                   setView('search');
-                  clearPreviousState();
                 }}
               >
                 <BookHeart />
