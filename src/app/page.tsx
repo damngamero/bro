@@ -76,6 +76,7 @@ import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from 'react-i18next';
+import { AppProvider } from '@/components/app-provider';
 import '@/lib/i18n';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
@@ -112,7 +113,7 @@ const TIP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
-export default function RecipeSavvyPage() {
+function RecipeSavvyContent() {
   const { t, i18n } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<View>('search');
@@ -1731,4 +1732,12 @@ export default function RecipeSavvyPage() {
       </AlertDialog>
     </>
   );
+}
+
+export default function RecipeSavvyPage() {
+  return (
+    <AppProvider>
+      <RecipeSavvyContent />
+    </AppProvider>
+  )
 }
