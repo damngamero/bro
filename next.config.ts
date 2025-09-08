@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+            ...config.watchOptions.ignored as string[],
+            '**/.genkit-state.json'
+        ]
+    }
+    return config
+  }
 };
 
 export default nextConfig;
