@@ -16,9 +16,9 @@ const creations = [
     {
         title: 'RecipeSavvy',
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
-        link: '/',
+        link: 'https://recipesavvy.vercel.app/',
         image: '/recipesavvy-screenshot.jpg',
-        internal: true,
+        internal: false,
     },
 ]
 
