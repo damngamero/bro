@@ -170,16 +170,16 @@ export function VariationDialog({
            <Separator />
           <div>
             <Label htmlFor="unavailable-equipment" className="text-base font-medium">
-              Unavailable Equipment
+              {t('unavailableEquipment')}
             </Label>
              <p className="text-sm text-muted-foreground pb-2">
-              Tell us what equipment you don't have, and we'll try to adapt the recipe.
+              {t('unavailableEquipmentDescription')}
             </p>
             <Input
               id="unavailable-equipment"
               value={unavailableEquipment}
               onChange={(e) => setUnavailableEquipment(e.target.value)}
-              placeholder="e.g., Oven, microwave, stand mixer..."
+              placeholder={t('unavailableEquipmentPlaceholder')}
             />
           </div>
         </div>

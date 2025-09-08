@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { X, Search } from "lucide-react"
 import { INGREDIENT_LIST } from "@/lib/ingredients"
+import { useTranslation } from "react-i18next"
 
 interface IngredientsDialogProps {
   isOpen: boolean
@@ -31,6 +32,7 @@ export function IngredientsDialog({
   selectedIngredients,
   onIngredientsChange,
 }: IngredientsDialogProps) {
+  const { t } = useTranslation();
   const [internalSelection, setInternalSelection] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -75,9 +77,9 @@ export function IngredientsDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Ingredients</DialogTitle>
+          <DialogTitle>{t('addIngredientsTitle')}</DialogTitle>
           <DialogDescription>
-            Search for an ingredient or select from the list below.
+            {t('addIngredientsDesc')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -91,7 +93,7 @@ export function IngredientsDialog({
                     handleAddCustomIngredient();
                 }
               }}
-              placeholder="Search or add a custom ingredient..."
+              placeholder={t('searchOrAdd')}
               className="pl-10"
             />
           </div>
@@ -104,7 +106,7 @@ export function IngredientsDialog({
                     onClick={handleAddCustomIngredient}
                   >
                     <Checkbox checked={false} />
-                    <span className="text-sm font-medium">Add "{searchTerm.trim()}"</span>
+                    <span className="text-sm font-medium">{t('addCustom', { searchTerm: searchTerm.trim() })}</span>
                  </div>
               )}
               {filteredIngredients.map((ingredient) => (
@@ -130,7 +132,7 @@ export function IngredientsDialog({
           </ScrollArea>
            {internalSelection.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Selected Ingredients:</p>
+              <p className="text-sm font-medium">{t('selectedIngredients')}</p>
               <div className="flex flex-wrap gap-2">
                 {internalSelection.map((ingredient) => (
                   <Badge
@@ -142,7 +144,7 @@ export function IngredientsDialog({
                     <button
                       onClick={() => handleToggleIngredient(ingredient)}
                       className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                      aria-label={`Remove ${ingredient}`}
+                      aria-label={`${t('remove')} ${ingredient}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -154,9 +156,9 @@ export function IngredientsDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="ghost">Cancel</Button>
+            <Button variant="ghost">{t('cancel')}</Button>
           </DialogClose>
-          <Button onClick={handleSave}>Add Ingredients</Button>
+          <Button onClick={handleSave}>{t('addIngredients')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
