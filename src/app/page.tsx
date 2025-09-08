@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -310,14 +311,22 @@ function RecipeSavvyContent() {
     if(storedUseAllergens) {
       setUseAllergens(JSON.parse(storedUseAllergens));
     }
+    
+    const sessionSuggestions = sessionStorage.getItem('suggestedRecipes');
+    if (sessionSuggestions) {
+      setSuggestedRecipes(JSON.parse(sessionSuggestions));
+    }
   }, []);
   
   useEffect(() => {
     if (apiKey && suggestedRecipes.length === 0) {
-      fetchInitialSuggestions();
+      const sessionSuggestions = sessionStorage.getItem('suggestedRecipes');
+      if (!sessionSuggestions) {
+        fetchInitialSuggestions();
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
+  }, [apiKey, suggestedRecipes.length]);
   
   useEffect(() => {
     localStorage.setItem('shownTips', JSON.stringify(shownTips));
@@ -352,6 +361,7 @@ function RecipeSavvyContent() {
       if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
       const { recipes } = await response.json();
       setSuggestedRecipes(recipes);
+      sessionStorage.setItem('suggestedRecipes', JSON.stringify(recipes));
     } catch (error) {
       console.error("Failed to fetch suggested recipes:", error);
     } finally {
@@ -554,6 +564,9 @@ function RecipeSavvyContent() {
     setSelectedRecipe(null);
     setShowAllRecipes(false);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
+    sessionStorage.removeItem('suggestedRecipes');
+    setSuggestedRecipes([]);
+
 
     try {
       const time = parseInt(maxCookTime, 10);
@@ -600,6 +613,8 @@ function RecipeSavvyContent() {
     if (!ensureApiKey()) return;
     
     setIsGeneratingRecipes(true); // Use the same loading state for a consistent feel
+    sessionStorage.removeItem('suggestedRecipes');
+    setSuggestedRecipes([]);
     try {
       const response = await fetch('/api/random-recipes', {
         method: 'POST',
@@ -668,7 +683,7 @@ function RecipeSavvyContent() {
     setCurrentStep(0);
     setStepDescriptionsCache({});
     setRelatedRecipes({ isLoading: false, data: null, error: null });
-    setGeneratedRecipes([]);
+    // Don't clear generated recipes to preserve cache
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
@@ -1246,6 +1261,8 @@ function RecipeSavvyContent() {
                         setIngredients([]);
                         setRecipeName('');
                         setGeneratedRecipes([]);
+                        sessionStorage.removeItem('suggestedRecipes');
+                        setSuggestedRecipes([]);
                     }}
                     variant="ghost"
                     className="w-full sm:w-auto"
@@ -1844,3 +1861,5 @@ export default function RecipeSavvyPage() {
     </AppProvider>
   )
 }
+
+    
