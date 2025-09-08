@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { LoaderCircle } from "lucide-react"
+import { LoaderCircle, Save } from "lucide-react"
 import { type RecipeDetailsOutput } from "@/ai/flows/generate-recipe-details"
 import { type RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
 
@@ -29,7 +29,7 @@ interface VariationDialogProps {
   recipeDetails: RecipeDetailsOutput
   apiKey: string | null
   model: ModelId
-  onVariationCreated: (newName: string, newDetails: RecipeDetailsOutput) => void
+  onVariationCreated: (newRecipe: {name: string, details: RecipeDetailsOutput}, originalRecipeName: string) => void
 }
 
 export function VariationDialog({
@@ -45,14 +45,15 @@ export function VariationDialog({
   const [addons, setAddons] = useState<string>("")
   const [unavailableEquipment, setUnavailableEquipment] = useState("");
   const [isLoading, setIsLoading] = useState(false)
+  const [generatedVariation, setGeneratedVariation] = useState<RecipeVariationOutput | null>(null);
   const { toast } = useToast()
 
-  const handleToggleExclude = (ingredient: string) => {
-    setExcludeIngredients(
-      excludeIngredients.includes(ingredient)
-        ? excludeIngredients.filter((i) => i !== ingredient)
-        : [...excludeIngredients, ingredient]
-    )
+  const handleClose = () => {
+    setExcludeIngredients([]);
+    setAddons("");
+    setUnavailableEquipment("");
+    setGeneratedVariation(null);
+    onOpenChange(false);
   }
 
   const handleGenerateVariation = async () => {
@@ -73,6 +74,7 @@ export function VariationDialog({
     }
 
     setIsLoading(true)
+    setGeneratedVariation(null);
     try {
       const response = await fetch('/api/generate-variation', {
         method: 'POST',
@@ -92,9 +94,13 @@ export function VariationDialog({
       }
 
       const result: RecipeVariationOutput = await response.json();
-
+      
       if (result.possible && result.newRecipe) {
-        onVariationCreated(result.newRecipe.name, result.newRecipe as RecipeDetailsOutput)
+        setGeneratedVariation(result);
+        toast({
+          title: 'Variation Created!',
+          description: 'You can now save this variation to your book.'
+        })
       } else {
         toast({
           variant: "destructive",
@@ -114,9 +120,19 @@ export function VariationDialog({
       setIsLoading(false)
     }
   }
+  
+  const handleSaveVariation = () => {
+    if (generatedVariation?.newRecipe) {
+        onVariationCreated({
+            name: generatedVariation.newRecipe.name,
+            details: generatedVariation.newRecipe as RecipeDetailsOutput,
+        }, recipeName);
+        handleClose();
+    }
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if(!open) handleClose()}}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create a Variation</DialogTitle>
@@ -182,13 +198,19 @@ export function VariationDialog({
           </div>
         </div>
         <DialogFooter>
-            <DialogClose asChild>
-                <Button variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleGenerateVariation} disabled={isLoading}>
-                {isLoading && <LoaderCircle className="animate-spin mr-2" />}
-                Generate Variation
-            </Button>
+            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+            {generatedVariation?.newRecipe ? (
+                <Button onClick={handleSaveVariation}>
+                    <Save className="mr-2" />
+                    Save to Variation Book
+                </Button>
+            ) : (
+                <Button onClick={handleGenerateVariation} disabled={isLoading}>
+                    {isLoading && <LoaderCircle className="animate-spin mr-2" />}
+                    Generate Variation
+                </Button>
+            )}
+
         </DialogFooter>
       </DialogContent>
     </Dialog>

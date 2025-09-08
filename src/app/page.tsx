@@ -61,6 +61,7 @@ import {
   Dices,
   Trash2,
   Salad,
+  BookCopy,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -96,12 +97,20 @@ type CookbookRecipe = {
   details: RecipeDetailsOutput;
 };
 
+type VariationBookRecipe = {
+  name: string;
+  details: RecipeDetailsOutput;
+  originalRecipeName: string;
+  createdAt: number;
+}
+
 type View = 'search' | 'details' | 'cooking' | 'enjoy';
 
 const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 3;
 const TIP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+const VARIATION_CACHE_DAYS = 7;
 
 
 function RecipeSavvyContent() {
@@ -138,6 +147,9 @@ function RecipeSavvyContent() {
 
   const [cookbook, setCookbook] = useState<CookbookRecipe[]>([]);
   const [showCookbook, setShowCookbook] = useState(false);
+
+  const [variationBook, setVariationBook] = useState<VariationBookRecipe[]>([]);
+  const [showVariationBook, setShowVariationBook] = useState(false);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAllergensOpen, setIsAllergensOpen] = useState(false);
@@ -271,6 +283,17 @@ function RecipeSavvyContent() {
     const storedCookbook = localStorage.getItem('cookbookRecipes');
     if (storedCookbook) {
       setCookbook(JSON.parse(storedCookbook));
+    }
+
+    const storedVariationBook = localStorage.getItem('variationBook');
+    if(storedVariationBook) {
+      const variations = JSON.parse(storedVariationBook) as VariationBookRecipe[];
+      const sevenDaysAgo = Date.now() - VARIATION_CACHE_DAYS * 24 * 60 * 60 * 1000;
+      const recentVariations = variations.filter(v => v.createdAt > sevenDaysAgo);
+      setVariationBook(recentVariations);
+      if (variations.length !== recentVariations.length) {
+        localStorage.setItem('variationBook', JSON.stringify(recentVariations));
+      }
     }
     
     const storedTips = localStorage.getItem('shownTips');
@@ -410,6 +433,7 @@ function RecipeSavvyContent() {
       setStepDescriptionsCache({});
       setView('details');
       setShowCookbook(false); 
+      setShowVariationBook(false);
       setRecipeName(''); // Clear recipe name search and suggestions
       setRecipeNameSuggestions([]);
 
@@ -524,6 +548,7 @@ function RecipeSavvyContent() {
     }
     setIsGeneratingRecipes(true);
     setShowCookbook(false);
+    setShowVariationBook(false);
     setGeneratedRecipes([]);
     setSelectedRecipe(null);
     setShowAllRecipes(false);
@@ -621,6 +646,7 @@ function RecipeSavvyContent() {
     setSelectedRecipe(null);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setShowCookbook(false);
+    setShowVariationBook(false);
     if (generatedRecipes.length > 0) {
       setTimeout(() => {
         if (resultsRef.current) {
@@ -636,14 +662,15 @@ function RecipeSavvyContent() {
     setView('search');
     setSelectedRecipe(null);
     setShowCookbook(false);
+    setShowVariationBook(false);
     setRecipeDetails({ isLoading: false, data: null, error: null, timedSteps: [] });
     setCurrentStep(0);
     setStepDescriptionsCache({});
     setRelatedRecipes({ isLoading: false, data: null, error: null });
+    setGeneratedRecipes([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
-
   const toggleCookbookRecipe = (recipeName: string, recipeDetails?: RecipeDetailsOutput) => {
     const isInCookbook = cookbook.some(f => f.name === recipeName);
     
@@ -688,6 +715,30 @@ function RecipeSavvyContent() {
     setDontAskAgain(false);
   };
 
+  const addVariationToBook = (variation: VariationBookRecipe) => {
+    const updatedBook = [...variationBook, variation];
+    setVariationBook(updatedBook);
+    localStorage.setItem('variationBook', JSON.stringify(updatedBook));
+    toast({
+      title: 'Variation Saved',
+      description: `${variation.name} has been added to your Variation Book for ${VARIATION_CACHE_DAYS} days.`
+    });
+  }
+
+  const removeVariationFromBook = (variationName: string) => {
+    const updatedBook = variationBook.filter(v => v.name !== variationName);
+    setVariationBook(updatedBook);
+    localStorage.setItem('variationBook', JSON.stringify(updatedBook));
+    toast({
+      title: 'Variation Removed',
+      description: `${variationName} has been removed from your Variation Book.`
+    });
+  }
+
+  const saveVariationToCookbook = (variation: VariationBookRecipe) => {
+    toggleCookbookRecipe(variation.name, variation.details);
+    removeVariationFromBook(variation.name);
+  }
 
   const isInCookbook = (recipeName: string) => cookbook.some(f => f.name === recipeName);
 
@@ -923,6 +974,80 @@ function RecipeSavvyContent() {
               ))}
             </div>
           )}
+        </motion.div>
+      );
+    }
+
+    if (showVariationBook) {
+      return (
+        <motion.div
+          key="variation-book-view"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button onClick={() => setShowVariationBook(false)} variant="ghost" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
+          </Button>
+          <h2 className="text-3xl font-headline text-center mb-6">
+              My Variation Book
+          </h2>
+           {variationBook.length === 0 ? (
+             <Card className="text-center p-8 border-dashed">
+                 <CardHeader>
+                     <div className="flex justify-center mb-4 text-muted-foreground">
+                         <BookCopy size={48} />
+                     </div>
+                     <CardTitle>Your Variation Book is Empty</CardTitle>
+                     <CardDescription>
+                         Save your recipe variations here.
+                         <br/>
+                         <span className="text-xs italic">Variations are saved for {VARIATION_CACHE_DAYS} days.</span>
+                     </CardDescription>
+                 </CardHeader>
+             </Card>
+           ) : (
+            <div className="space-y-4">
+              {variationBook.map(recipe => (
+                 <motion.div
+                    key={recipe.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                 >
+                   <Card className="shadow-md hover:shadow-xl transition-shadow duration-300">
+                     <CardHeader>
+                      <CardTitle className="cursor-pointer" onClick={() => handleSelectRecipe(recipe.name, {newDetails: recipe.details})}>
+                          {recipe.name}
+                      </CardTitle>
+                      <CardDescription>
+                          A variation of "{recipe.originalRecipeName}"
+                      </CardDescription>
+                     </CardHeader>
+                     <CardFooter className="p-4 border-t justify-end gap-2">
+                         <Button
+                             variant="outline"
+                             size="sm"
+                             className="text-muted-foreground hover:text-destructive"
+                             onClick={() => removeVariationFromBook(recipe.name)}
+                         >
+                             <Trash2 size={16} className="mr-2"/>
+                             Delete
+                         </Button>
+                         <Button
+                            size="sm"
+                            onClick={() => saveVariationToCookbook(recipe)}
+                         >
+                            <Heart size={16} className="mr-2"/>
+                            Save to Cookbook
+                         </Button>
+                     </CardFooter>
+                   </Card>
+                 </motion.div>
+               ))}
+            </div>
+           )}
         </motion.div>
       );
     }
@@ -1548,7 +1673,20 @@ function RecipeSavvyContent() {
                 variant="ghost"
                 size="icon"
                 onClick={() => {
+                  setShowVariationBook(true);
+                  setShowCookbook(false);
+                  setView('search');
+                }}
+              >
+                <BookCopy />
+                <span className="sr-only">My Variation Book</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
                   setShowCookbook(true);
+                  setShowVariationBook(false);
                   setView('search');
                 }}
               >
@@ -1607,8 +1745,15 @@ function RecipeSavvyContent() {
           recipeDetails={recipeDetails.data}
           apiKey={apiKey}
           model={model}
-          onVariationCreated={(newName, newDetails) => {
-            handleSelectRecipe(newName, { newDetails: newDetails as RecipeDetailsOutput });
+          onVariationCreated={(newRecipe, originalRecipeName) => {
+            addVariationToBook({
+              ...newRecipe,
+              originalRecipeName: originalRecipeName,
+              createdAt: Date.now()
+            });
+            // We can optionally view the new recipe directly, or just close the dialog.
+            // For now, just closing the dialog.
+            // handleSelectRecipe(newName, { newDetails: newDetails as RecipeDetailsOutput });
             setIsVariationOpen(false);
           }}
         />
