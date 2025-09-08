@@ -19,8 +19,8 @@ const GenerateRecipesFromIngredientsInputSchema = z.object({
   halalMode: z.boolean().optional().describe('Whether to only suggest halal recipes.'),
   allergens: z.array(z.string()).optional().describe('A list of allergens to avoid.'),
   maxCookTime: z.number().optional().describe('The maximum total cooking time in minutes.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 export type GenerateRecipesFromIngredientsInput = z.infer<
   typeof GenerateRecipesFromIngredientsInputSchema
@@ -63,7 +63,7 @@ const generateRecipesFromIngredientsFlow = ai.defineFlow(
   async input => {
     const {output} = await prompt(input, {
       model: input.model as ModelId,
-      config: input.apiKey ? { apiKey: input.apiKey } : undefined,
+      config: { apiKey: input.apiKey },
     });
     return output!;
   }

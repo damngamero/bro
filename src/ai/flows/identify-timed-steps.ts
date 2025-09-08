@@ -10,8 +10,8 @@ import {ModelId} from '@genkit-ai/googleai';
 
 const IdentifyTimedStepsInputSchema = z.object({
   instructions: z.array(z.string()).describe('A list of cooking instructions.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type IdentifyTimedStepsInput = z.infer<typeof IdentifyTimedStepsInputSchema>;
@@ -51,7 +51,7 @@ If a step has a range (e.g., 10-15 minutes), use the average. If a step mentions
       prompt,
       model: model as ModelId,
       output: { schema: IdentifyTimedStepsOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
 
     return output!;

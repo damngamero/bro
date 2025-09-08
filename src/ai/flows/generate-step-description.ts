@@ -11,8 +11,8 @@ import {ModelId} from '@genkit-ai/googleai';
 const GenerateStepDescriptionInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
   instruction: z.string().describe('The cooking instruction for the current step.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type GenerateStepDescriptionInput = z.infer<typeof GenerateStepDescriptionInputSchema>;
@@ -47,7 +47,7 @@ Provide a concise, two-sentence description of what the food should look like at
       prompt,
       model: model as ModelId,
       output: { schema: GenerateStepDescriptionOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
 
     return output!;

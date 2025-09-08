@@ -12,8 +12,8 @@ const TroubleshootStepInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
   instruction: z.string().describe('The cooking instruction where the user is having trouble.'),
   problem: z.string().describe("The user's description of what's going wrong."),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type TroubleshootStepInput = z.infer<typeof TroubleshootStepInputSchema>;
@@ -49,7 +49,7 @@ Provide clear, concise, and encouraging advice to help them fix the problem and 
       prompt,
       model: model as ModelId,
       output: { schema: TroubleshootStepOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
     
     return output!;

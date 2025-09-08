@@ -11,8 +11,8 @@ import { ModelId } from '@genkit-ai/googleai';
 
 const GenerateRandomRecipesInputSchema = z.object({
   count: z.number().default(1).describe('The number of random recipes to generate.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type GenerateRandomRecipesInput = z.infer<typeof GenerateRandomRecipesInputSchema>;

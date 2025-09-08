@@ -10,8 +10,8 @@ import {ModelId} from '@genkit-ai/googleai';
 
 const GenerateRelatedRecipesInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe to find related recipes for.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type GenerateRelatedRecipesInput = z.infer<typeof GenerateRelatedRecipesInputSchema>;
@@ -41,7 +41,7 @@ const generateRelatedRecipesFlow = ai.defineFlow(
       prompt,
       model: model as ModelId,
       output: { schema: GenerateRelatedRecipesOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
     
     return output!;

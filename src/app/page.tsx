@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useCallback, FormEvent, useRef, useEffect } from 'react';
@@ -422,6 +420,11 @@ export default function RecipeSavvyPage() {
       setRecipeName(''); // Clear recipe name search and suggestions
       setRecipeNameSuggestions([]);
 
+      if (!ensureApiKey()) {
+        setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.', timedSteps: [] });
+        return;
+      }
+
       if (options?.newDetails) {
         const timedStepsResult = await identifyTimedSteps({
           instructions: options.newDetails.instructions,
@@ -443,11 +446,6 @@ export default function RecipeSavvyPage() {
         return;
       }
       
-      if (!ensureApiKey()) {
-        setRecipeDetails({ isLoading: false, data: null, error: 'API Key is missing.', timedSteps: [] });
-        return;
-      }
-
       try {
         setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
         const details = await generateRecipeDetails({

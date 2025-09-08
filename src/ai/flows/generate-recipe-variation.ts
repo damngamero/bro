@@ -14,8 +14,8 @@ const GenerateRecipeVariationInputSchema = z.object({
   ingredientsToExclude: z.array(z.string()).optional().describe('A list of ingredients to remove from the recipe.'),
   addons: z.array(z.string()).optional().describe('A list of ingredients to add to the recipe.'),
   unavailableEquipment: z.array(z.string()).optional().describe('A list of cooking equipment the user does not have.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type GenerateRecipeVariationInput = z.infer<typeof GenerateRecipeVariationInputSchema>;
@@ -75,7 +75,7 @@ If it is not possible to create a good-tasting recipe with these changes, please
       prompt,
       model: model as ModelId,
       output: { schema: RecipeVariationOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
     
     return output!;

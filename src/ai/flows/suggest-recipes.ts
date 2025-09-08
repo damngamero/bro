@@ -10,8 +10,8 @@ import { ModelId } from '@genkit-ai/googleai';
 
 const SuggestRecipesInputSchema = z.object({
   query: z.string().describe("The user's partial search query for a recipe."),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type SuggestRecipesInput = z.infer<typeof SuggestRecipesInputSchema>;
@@ -41,7 +41,7 @@ const suggestRecipesFlow = ai.defineFlow(
       prompt,
       model: model as ModelId,
       output: { schema: SuggestRecipesOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
 
     return output!;

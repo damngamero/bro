@@ -13,8 +13,8 @@ const GenerateCookingTipInputSchema = z.object({
   context: z.object({
     view: z.string().describe("The user's current view in the app (e.g., 'search', 'cooking')."),
   }).optional().describe('The context of where the user is in the app.'),
-  apiKey: z.string().optional().describe('Google AI API key.'),
-  model: z.string().optional().describe('The model to use for generation.'),
+  apiKey: z.string().describe('Google AI API key.'),
+  model: z.string().describe('The model to use for generation.'),
 });
 
 export type GenerateCookingTipInput = z.infer<typeof GenerateCookingTipInputSchema>;
@@ -76,7 +76,7 @@ Please provide one new, unique, and helpful tip about using the app. Frame it as
       prompt,
       model: model as ModelId,
       output: { schema: GenerateCookingTipOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey },
     });
 
     return output!;
