@@ -10,7 +10,7 @@ const creations = [
         title: 'VerdantWise',
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
-        image: 'https://i.ibb.co/Q7PRLSg/verdent-wise.png',
+        image: 'https://i.ibb.co/7CzrWb6/verdantwise-logo.png',
         external: true,
     },
     {
@@ -18,7 +18,7 @@ const creations = [
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
         link: 'https://recipesavvy.vercel.app/',
         image: 'https://i.ibb.co/bBQrTjL/recipe-savvy.png',
-        external: false,
+        external: true,
     },
 ]
 
@@ -46,7 +46,7 @@ export default function CreationsPage() {
                                     alt={`${creation.title} screenshot`}
                                     width={1280}
                                     height={720}
-                                    className="object-cover w-full h-full"
+                                    className="object-contain w-full h-full p-8"
                                     data-ai-hint="website ui screenshot"
                                 />
                             </div>
