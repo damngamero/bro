@@ -18,12 +18,15 @@ i18n
     supportedLngs: languages.map(l => l.code),
     fallbackLng: "en",
     detection: {
-      order: ['cookie', 'htmlTag', 'localStorage', 'path', 'subdomain'],
-      caches: ['cookie'],
+      order: ['cookie', 'localStorage', 'htmlTag', 'path', 'subdomain'],
+      caches: ['cookie', 'localStorage'],
     },
     backend: {
       loadPath: '/locales/{{lng}}/translation.json',
     },
+    react: {
+        useSuspense: false, // Prevents suspense issue with translations loading
+    }
   });
 
 export default i18n;

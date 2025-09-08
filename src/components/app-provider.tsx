@@ -10,9 +10,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
 
   useEffect(() => {
-    document.documentElement.lang = i18n.language;
-    document.documentElement.dir = i18n.dir(i18n.language);
-  }, [i18n, i18n.language]);
+    const handleLanguageChanged = (lng: string) => {
+      document.documentElement.lang = lng;
+      document.documentElement.dir = i18n.dir(lng);
+    };
+
+    // Set initial direction
+    handleLanguageChanged(i18n.language);
+    
+    // Listen for language changes
+    i18n.on('languageChanged', handleLanguageChanged);
+
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, [i18n]);
 
   return (
     <ThemeProvider

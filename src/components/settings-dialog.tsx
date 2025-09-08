@@ -71,8 +71,6 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
 
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode);
-    document.documentElement.lang = langCode;
-    document.documentElement.dir = i18n.dir(langCode);
     setLangPopoverOpen(false);
   }
 
