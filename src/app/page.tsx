@@ -112,7 +112,7 @@ const MAX_TIPS = 25;
 const MAX_TIPS_IN_30_MIN = 3;
 const TIP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
-const VARIATION_CACHE_DAYS = 7;
+const VARIATION_CACHE_DAYS = 3;
 
 
 function RecipeSavvyContent() {
@@ -290,8 +290,8 @@ function RecipeSavvyContent() {
     const storedVariationBook = localStorage.getItem('variationBook');
     if(storedVariationBook) {
       const variations = JSON.parse(storedVariationBook) as VariationBookRecipe[];
-      const sevenDaysAgo = Date.now() - VARIATION_CACHE_DAYS * 24 * 60 * 60 * 1000;
-      const recentVariations = variations.filter(v => v.createdAt > sevenDaysAgo);
+      const threeDaysAgo = Date.now() - VARIATION_CACHE_DAYS * 24 * 60 * 60 * 1000;
+      const recentVariations = variations.filter(v => v.createdAt > threeDaysAgo);
       setVariationBook(recentVariations);
       if (variations.length !== recentVariations.length) {
         localStorage.setItem('variationBook', JSON.stringify(recentVariations));
@@ -1691,18 +1691,6 @@ function RecipeSavvyContent() {
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  setShowVariationBook(true);
-                  setShowCookbook(false);
-                  setView('search');
-                }}
-              >
-                <BookCopy />
-                <span className="sr-only">My Variation Book</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
                   setShowCookbook(true);
                   setShowVariationBook(false);
                   setView('search');
@@ -1711,6 +1699,20 @@ function RecipeSavvyContent() {
                 <BookHeart />
                 <span className="sr-only">My Cookbook</span>
               </Button>
+              {variationBook.length > 0 && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                    setShowVariationBook(true);
+                    setShowCookbook(false);
+                    setView('search');
+                    }}
+                >
+                    <BookCopy />
+                    <span className="sr-only">My Variation Book</span>
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
                 <Settings />
                 <span className="sr-only">Settings</span>
