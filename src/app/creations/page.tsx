@@ -7,19 +7,19 @@ import Link from 'next/link';
 
 const creations = [
     {
+        title: 'VerdantWise',
+        description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
+        link: 'https://verdantwise.vercel.app/',
+        image: '/verdantwise-screenshot.jpg',
+        internal: false,
+    },
+    {
         title: 'RecipeSavvy',
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
         link: '/',
         image: '/recipesavvy-screenshot.jpg',
         internal: true,
     },
-    {
-        title: 'VerdantWise',
-        description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
-        link: 'https://verdantwise.vercel.app/',
-        image: '/verdantwise-screenshot.jpg',
-        internal: false,
-    }
 ]
 
 export default function CreationsPage() {
@@ -65,7 +65,7 @@ export default function CreationsPage() {
                                 ) : (
                                      <a href={creation.link} target="_blank" rel="noopener noreferrer" className="w-full">
                                         <Button className="w-full">
-                                            View Project
+                                            Go to App
                                             <ArrowUpRight className="ml-2 h-4 w-4" />
                                         </Button>
                                     </a>
