@@ -25,10 +25,13 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
+    const ignored = Array.isArray(config.watchOptions.ignored)
+      ? config.watchOptions.ignored
+      : [];
     config.watchOptions = {
         ...config.watchOptions,
         ignored: [
-            ...config.watchOptions.ignored as string[],
+            ...ignored,
             '**/.genkit-state.json'
         ]
     }
