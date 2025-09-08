@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -159,7 +160,11 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
           <TabsContent value="about">
             <div className="py-4 space-y-4">
               <p className="text-sm text-foreground">
-                This application is made by <span className="font-bold">TheVibeCod3r</span> to showcase the power of AI in everyday applications.
+                This application is made by{' '}
+                <Link href="/creations" className="font-bold underline hover:text-primary transition-colors" onClick={() => onOpenChange(false)}>
+                    TheVibeCod3r
+                </Link>
+                {' '}to showcase the power of AI in everyday applications.
               </p>
               <p className="text-sm text-muted-foreground">
                 Built with Next.js, Genkit, and ShadCN UI.
