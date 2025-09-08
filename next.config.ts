@@ -24,24 +24,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  turbo: {
-    rules: {
-      '**/.genkit-state.json': {
-        loaders: ['empty-loader'],
-      },
-    },
-  },
   webpack: (config, { isServer }) => {
+    // This is the correct way to ignore files in both Webpack and Turbopack.
+    // Ensure watchOptions and ignored exist before trying to modify them.
+    config.watchOptions = config.watchOptions || {};
     const ignored = Array.isArray(config.watchOptions.ignored)
       ? config.watchOptions.ignored
       : [];
-    config.watchOptions = {
-        ...config.watchOptions,
-        ignored: [
-            ...ignored,
-            '**/.genkit-state.json'
-        ]
-    }
+      
+    config.watchOptions.ignored = [
+        ...ignored,
+        '**/.genkit-state.json'
+    ];
+    
     return config
   }
 };
