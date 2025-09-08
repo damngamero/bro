@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -262,10 +263,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     
     // If not in cache, trigger translation but return English text for now
     if (!cachedTranslation) {
-      // Use effect to avoid triggering during render
-      useEffect(() => {
-        translateAndCache(key, englishText, language);
-      }, [key, englishText, language, translateAndCache]);
+      translateAndCache(key, englishText, language);
     }
 
     let textToDisplay = cachedTranslation || englishText;
@@ -294,3 +292,5 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     </TranslationContext.Provider>
   );
 }
+
+    
