@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppProvider } from '@/components/app-provider';
-import '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'RecipeSavvy',

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
+import '@/lib/i18n';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
