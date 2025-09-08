@@ -48,6 +48,14 @@ export function VariationDialog({
   const [generatedVariation, setGeneratedVariation] = useState<RecipeVariationOutput | null>(null);
   const { toast } = useToast()
 
+  const handleToggleExclude = (ingredient: string) => {
+    setExcludeIngredients(
+      excludeIngredients.includes(ingredient)
+        ? excludeIngredients.filter((i) => i !== ingredient)
+        : [...excludeIngredients, ingredient]
+    )
+  }
+
   const handleClose = () => {
     setExcludeIngredients([]);
     setAddons("");

@@ -134,7 +134,7 @@ function RecipeSavvyContent() {
 
   const [recipeNameSuggestions, setRecipeNameSuggestions] = useState<string[]>([]);
   const [isSuggestingRecipeNames, setIsSuggestingRecipeNames] = useState(false);
-  const debouncedRecipeName = useDebounce(recipeName, 3000);
+  const debouncedRecipeName = useDebounce(recipeName, 2000);
 
 
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
