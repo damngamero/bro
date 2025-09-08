@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  turbo: {
+    rules: {
+      '**/.genkit-state.json': {
+        loaders: ['empty-loader'],
+      },
+    },
+  },
   webpack: (config, { isServer }) => {
     const ignored = Array.isArray(config.watchOptions.ignored)
       ? config.watchOptions.ignored
