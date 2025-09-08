@@ -76,6 +76,7 @@ import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AppProvider } from '@/components/app-provider';
+import Link from 'next/link';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -1710,7 +1711,12 @@ function RecipeSavvyContent() {
         </main>
 
         <footer className="text-center py-4 text-muted-foreground text-sm">
-          <p>Made By : TheVibeCod3r</p>
+          <p>
+            Made By :{' '}
+            <Link href="/creations" className="font-bold underline hover:text-primary transition-colors">
+                TheVibeCod3r
+            </Link>
+          </p>
         </footer>
       </div>
 
