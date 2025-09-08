@@ -7,7 +7,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { ModelId } from '@genkit-ai/googleai';
-import { RecipeDetailsOutput } from './generate-recipe-details';
 
 const GenerateRecipeVariationInputSchema = z.object({
   recipeName: z.string().describe('The name of the original recipe.'),
