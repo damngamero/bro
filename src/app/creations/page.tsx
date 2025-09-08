@@ -10,14 +10,14 @@ const creations = [
         title: 'VerdantWise',
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
-        image: '/verdantwise-screenshot.jpg',
+        image: 'https://i.ibb.co/Q7PRLSg/verdent-wise.png',
         external: true,
     },
     {
         title: 'RecipeSavvy',
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
         link: 'https://recipesavvy.vercel.app/',
-        image: '/recipesavvy-screenshot.jpg',
+        image: 'https://i.ibb.co/bBQrTjL/recipe-savvy.png',
         external: false,
     },
 ]
@@ -42,7 +42,7 @@ export default function CreationsPage() {
                         <Card key={creation.title} className="overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
                              <div className="aspect-video bg-muted flex items-center justify-center">
                                 <Image 
-                                    src="https://picsum.photos/1280/720" 
+                                    src={creation.image} 
                                     alt={`${creation.title} screenshot`}
                                     width={1280}
                                     height={720}
