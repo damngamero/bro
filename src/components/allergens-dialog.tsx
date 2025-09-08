@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
-import { useTranslation } from "@/components/translation-provider"
 
 const COMMON_ALLERGENS = ["Peanuts", "Tree nuts", "Milk", "Egg", "Soy", "Wheat", "Fish", "Shellfish", "Gluten"];
 
@@ -32,7 +31,6 @@ export function AllergensDialog({
   allergens,
   onAllergensChange,
 }: AllergensDialogProps) {
-  const { t } = useTranslation();
   const [newAllergen, setNewAllergen] = useState("")
 
   const handleToggleCommonAllergen = (allergen: string) => {
@@ -58,14 +56,14 @@ export function AllergensDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('manageAllergens')}</DialogTitle>
+          <DialogTitle>Manage Allergens</DialogTitle>
           <DialogDescription>
-            {t('manageAllergensDescription')}
+            Select common allergens or add your own to filter out recipes.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
-            <Label className="text-sm font-medium">{t('commonAllergens')}</Label>
+            <Label className="text-sm font-medium">Common Allergens</Label>
             <div className="flex flex-wrap gap-2 pt-2">
               {COMMON_ALLERGENS.map((allergen) => (
                 <Button
@@ -74,14 +72,14 @@ export function AllergensDialog({
                   size="sm"
                   onClick={() => handleToggleCommonAllergen(allergen)}
                 >
-                  {t(allergen.toLowerCase().replace(" ", ""))}
+                  {allergen}
                 </Button>
               ))}
             </div>
           </div>
           <div>
             <Label htmlFor="custom-allergen" className="text-sm font-medium">
-              {t('customAllergen')}
+              Custom Allergen
             </Label>
             <div className="flex gap-2 pt-2">
               <Input
@@ -89,14 +87,14 @@ export function AllergensDialog({
                 value={newAllergen}
                 onChange={(e) => setNewAllergen(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddCustomAllergen()}
-                placeholder={t('customAllergenPlaceholder')}
+                placeholder={"e.g., Sesame"}
               />
-              <Button onClick={handleAddCustomAllergen}>{t('add')}</Button>
+              <Button onClick={handleAddCustomAllergen}>Add</Button>
             </div>
           </div>
           {allergens.length > 0 && (
             <div>
-              <Label className="text-sm font-medium">{t('yourActiveAllergens')}</Label>
+              <Label className="text-sm font-medium">Your Active Allergens</Label>
               <div className="flex flex-wrap gap-2 pt-2">
                 {allergens.map((allergen) => (
                   <Badge
@@ -108,7 +106,7 @@ export function AllergensDialog({
                     <button
                       onClick={() => handleRemoveAllergen(allergen)}
                       className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                      aria-label={`${t('remove')} ${allergen}`}
+                      aria-label={`Remove ${allergen}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -120,7 +118,7 @@ export function AllergensDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button>{t('done')}</Button>
+            <Button>Done</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

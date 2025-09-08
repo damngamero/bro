@@ -76,7 +76,6 @@ import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AppProvider } from '@/components/app-provider';
-import { useTranslation, TranslationProvider } from '@/components/translation-provider';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -113,7 +112,6 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 function RecipeSavvyContent() {
-  const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<View>('search');
   const [previousState, setPreviousState] = useState<PreviousState>(null);
@@ -241,7 +239,7 @@ function RecipeSavvyContent() {
                 title: (
                     <div className="flex items-center gap-2">
                         <Lightbulb className="text-yellow-400" />
-                        {t('proTip')}
+                        Pro Tip!
                     </div>
                 ),
                 description: tip,
@@ -254,7 +252,7 @@ function RecipeSavvyContent() {
         }
     }, TIP_INTERVAL_MS);
 
-  }, [apiKey, model, shownTips, tipCountLast30Min, toast, view, selectedRecipe, recipeDetails.data, currentStep, t]);
+  }, [apiKey, model, shownTips, tipCountLast30Min, toast, view, selectedRecipe, recipeDetails.data, currentStep]);
 
   useEffect(() => {
     // Reset the 30-minute tip counter every 30 minutes
@@ -403,15 +401,15 @@ function RecipeSavvyContent() {
       if (showAlert) {
         toast({
           variant: 'destructive',
-          title: t('apiKeyMissing'),
-          description: t('addApiKeyInSettings'),
+          title: 'API Key Missing',
+          description: 'Please add your API key in the settings.',
         });
       }
       setIsSettingsOpen(true);
       return false;
     }
     return true;
-  }, [apiKey, toast, t]);
+  }, [apiKey, toast]);
 
   const clearPreviousState = () => {
     setPreviousState(null);
@@ -501,17 +499,17 @@ function RecipeSavvyContent() {
         setRecipeDetails({
           isLoading: false,
           data: null,
-          error: t('failedToLoadRecipe'),
+          error: 'Failed to load the recipe details.',
           timedSteps: [],
         });
         toast({
           variant: 'destructive',
-          title: t('error'),
-          description: t('failedToLoadRecipe'),
+          title: 'Error',
+          description: 'Failed to load the recipe details.',
         });
       }
     },
-    [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model, t]
+    [apiKey, isHalal, useAllergens, allergens, toast, cookbook, ensureApiKey, model]
   );
   
   const handleGetRecipeFromName = useCallback(async () => {
@@ -519,13 +517,13 @@ function RecipeSavvyContent() {
     if (!recipeName.trim()) {
       toast({
         variant: 'destructive',
-        title: t('noRecipeName'),
-        description: t('enterRecipeName'),
+        title: 'No Recipe Name',
+        description: 'Please enter a recipe name to search.',
       });
       return;
     }
     handleSelectRecipe(recipeName);
-  }, [recipeName, ensureApiKey, toast, handleSelectRecipe, t]);
+  }, [recipeName, ensureApiKey, toast, handleSelectRecipe]);
 
 
   const handleGenerateRecipes = useCallback(async () => {
@@ -534,8 +532,8 @@ function RecipeSavvyContent() {
     if (ingredients.length === 0) {
       toast({
         variant: 'destructive',
-        title: t('noIngredients'),
-        description: t('addIngredientsFirst'),
+        title: 'No Ingredients',
+        description: 'Please add some ingredients first.',
       });
       return;
     }
@@ -569,9 +567,9 @@ function RecipeSavvyContent() {
 
       if (result.recipes.length === 0) {
         toast({
-          title: t('noRecipesFound'),
+          title: 'No Recipes Found',
           description:
-            t('noRecipesFoundDescription'),
+            "We couldn't find any recipes with the ingredients and filters provided. Try removing some ingredients or filters.",
         });
       }
       setGeneratedRecipes(result.recipes);
@@ -579,13 +577,13 @@ function RecipeSavvyContent() {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: t('error'),
-        description: t('failedToGenerateRecipes'),
+        title: 'Error',
+        description: 'Failed to generate recipes. Please try again.',
       });
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [ingredients, isHalal, useAllergens, allergens, maxCookTime, apiKey, toast, ensureApiKey, model, t]);
+  }, [ingredients, isHalal, useAllergens, allergens, maxCookTime, apiKey, toast, ensureApiKey, model]);
 
   const handleSurpriseMe = useCallback(async () => {
     if (!ensureApiKey()) return;
@@ -605,21 +603,21 @@ function RecipeSavvyContent() {
       } else {
         toast({
           variant: 'destructive',
-          title: t('ohNo'),
-          description: t('couldNotFindSurprise'),
+          title: 'Oh no!',
+          description: "Couldn't find a surprise recipe. Please try again.",
         });
       }
     } catch (error) {
       console.error("Surprise me failed:", error);
       toast({
         variant: 'destructive',
-        title: t('error'),
-        description: t('failedToFindSurprise'),
+        title: 'Error',
+        description: 'Failed to find a surprise recipe. Please try again.',
       });
     } finally {
       setIsGeneratingRecipes(false);
     }
-  }, [apiKey, ensureApiKey, handleSelectRecipe, model, toast, t]);
+  }, [apiKey, ensureApiKey, handleSelectRecipe, model, toast]);
 
   useEffect(() => {
     if (generatedRecipes.length > 0 && resultsRef.current) {
@@ -655,12 +653,12 @@ function RecipeSavvyContent() {
       setPreviousState({ view, recipeName: selectedRecipe });
       toast({
         id: 'undo-toast',
-        title: t('returnedHome'),
-        description: t('canGoBack'),
+        title: 'Returned Home',
+        description: 'You can go back to where you were.',
         action: (
           <Button variant="outline" size="sm" onClick={handleRestoreState}>
             <Undo2 className="mr-2" />
-            {t('undo')}
+            Undo
           </Button>
         ),
         duration: 8000,
@@ -698,7 +696,7 @@ function RecipeSavvyContent() {
       setCookbook(updatedCookbook);
       localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
       toast({
-        title: t('removedFromCookbook'),
+        title: 'Removed from Cookbook',
         description: recipeName,
       });
     } else if (recipeDetails) {
@@ -706,7 +704,7 @@ function RecipeSavvyContent() {
       setCookbook(updatedCookbook);
       localStorage.setItem('cookbookRecipes', JSON.stringify(updatedCookbook));
        toast({
-        title: t('addedToCookbook'),
+        title: 'Added to Cookbook',
         description: recipeName,
       });
     }
@@ -769,12 +767,12 @@ function RecipeSavvyContent() {
       console.error(error);
       setStepDescriptionsCache(prev => ({
         ...prev,
-        [currentStep]: { isLoading: false, data: null, error: t('failedToGetDescription') }
+        [currentStep]: { isLoading: false, data: null, error: 'Failed to get description.' }
       }));
       toast({
         variant: 'destructive',
-        title: t('descriptionFailed'),
-        description: t('couldNotGenerateDescription'),
+        title: 'Description Failed',
+        description: 'Could not generate a description for this step.',
       });
     }
   };
@@ -800,11 +798,11 @@ function RecipeSavvyContent() {
       setTroubleshootingAdvice({ isLoading: false, data: result.advice, error: null });
     } catch (error) {
       console.error(error);
-      setTroubleshootingAdvice({ isLoading: false, data: null, error: t('failedToGetAdvice') });
+      setTroubleshootingAdvice({ isLoading: false, data: null, error: 'Failed to get advice.' });
       toast({
         variant: 'destructive',
-        title: t('failedToGetAdviceTitle'),
-        description: t('failedToGetAdviceDescription'),
+        title: 'Couldn\'t Get Advice',
+        description: 'We were unable to get troubleshooting advice at this time.',
       });
     }
   };
@@ -825,7 +823,7 @@ function RecipeSavvyContent() {
       setRelatedRecipes({ isLoading: false, data: result.recipes, error: null });
     } catch(error) {
       console.error(error);
-      setRelatedRecipes({ isLoading: false, data: null, error: t('failedToGetRelatedRecipes') });
+      setRelatedRecipes({ isLoading: false, data: null, error: 'Failed to get related recipes.' });
     }
   };
 
@@ -885,8 +883,8 @@ function RecipeSavvyContent() {
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
       let result = "";
-      if (hours > 0) result += `${hours} ${t(hours > 1 ? 'hours' : 'hour')} `;
-      if (minutes > 0) result += `${minutes} ${t(minutes > 1 ? 'minutes' : 'minute')}`;
+      if (hours > 0) result += `${hours} ${hours > 1 ? 'hours' : 'hour'} `;
+      if (minutes > 0) result += `${minutes} ${minutes > 1 ? 'minutes' : 'minute'}`;
       return result.trim();
   };
 
@@ -911,10 +909,10 @@ function RecipeSavvyContent() {
           transition={{ duration: 0.3 }}
         >
           <Button onClick={() => setShowCookbook(false)} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> {t('backToSearch')}
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
           </Button>
           <h2 className="text-3xl font-headline text-center mb-6">
-              {t('myCookbook')}
+              My Cookbook
           </h2>
 
           {cookbook.length === 0 ? (
@@ -923,11 +921,11 @@ function RecipeSavvyContent() {
                     <div className="flex justify-center mb-4 text-muted-foreground">
                         <BookHeart size={48} />
                     </div>
-                    <CardTitle>{t('cookbookEmpty')}</CardTitle>
+                    <CardTitle>Your Cookbook is Empty</CardTitle>
                     <CardDescription>
-                        {t('saveRecipesPrompt')}
+                        Save your favorite recipes here for easy access.
                         <br/>
-                        <span className="text-xs italic">{t('cacheWarningCookbook')}</span>
+                        <span className="text-xs italic">Note: Your cookbook is saved in your browser's cache.</span>
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -961,7 +959,7 @@ function RecipeSavvyContent() {
                             }}
                         >
                             <Trash2 size={18} />
-                            <span className="sr-only">{t('remove')} {recipe.name}</span>
+                            <span className="sr-only">Remove {recipe.name}</span>
                         </Button>
                     </CardFooter>
                   </Card>
@@ -989,15 +987,15 @@ function RecipeSavvyContent() {
             {isApiKeyMissing && (
                 <Alert variant="destructive" className="mb-6">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>{t('apiKeyRequired')}</AlertTitle>
+                    <AlertTitle>API Key Required</AlertTitle>
                     <AlertDescription>
-                        {t('apiKeyRequiredDescription')}
+                        Please add your Google AI API key in the settings to use the app.
                         <Button
                             variant="link"
                             className="p-0 h-auto ml-2 text-black dark:text-white font-bold"
                             onClick={() => setIsSettingsOpen(true)}
                         >
-                            {t('openSettings')}
+                            Open Settings.
                         </Button>
                     </AlertDescription>
                 </Alert>
@@ -1005,7 +1003,7 @@ function RecipeSavvyContent() {
             <Card className="shadow-lg overflow-hidden">
               <CardHeader>
                 <CardTitle className="font-headline text-2xl">
-                  {t('findYourNextMeal')}
+                  Find Your Next Meal
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1015,15 +1013,15 @@ function RecipeSavvyContent() {
                   onValueChange={() => clearPreviousState()}
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="ingredients">{t('byIngredients')}</TabsTrigger>
-                    <TabsTrigger value="recipe">{t('byRecipeName')}</TabsTrigger>
+                    <TabsTrigger value="ingredients">By Ingredients</TabsTrigger>
+                    <TabsTrigger value="recipe">By Recipe Name</TabsTrigger>
                   </TabsList>
                   <TabsContent value="ingredients">
                     <Card className="border-0 shadow-none">
                       <CardHeader className="px-1 pt-4">
-                        <CardTitle className="text-xl">{t('whatsInPantry')}</CardTitle>
+                        <CardTitle className="text-xl">What's in your pantry?</CardTitle>
                         <CardDescription>
-                          {t('addIngredientsPrompt')}
+                          Add the ingredients you have on hand to find recipes.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1">
@@ -1033,7 +1031,7 @@ function RecipeSavvyContent() {
                             className="w-full justify-start h-auto py-3 text-muted-foreground font-normal mb-4"
                         >
                             <Plus className="mr-2" />
-                            <span>{t('addIngredients')}...</span>
+                            <span>Add Ingredients...</span>
                         </Button>
                         <div className="flex flex-wrap gap-2">
                           {ingredients.map(ingredient => (
@@ -1046,7 +1044,7 @@ function RecipeSavvyContent() {
                               <button
                                 onClick={() => handleRemoveIngredient(ingredient)}
                                 className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                                aria-label={`${t('remove')} ${ingredient}`}
+                                aria-label={`Remove ${ingredient}`}
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -1060,10 +1058,10 @@ function RecipeSavvyContent() {
                     <Card className="border-0 shadow-none">
                       <CardHeader className="px-1 pt-4">
                         <CardTitle className="text-xl">
-                          {t('whatToCook')}
+                          What to cook?
                         </CardTitle>
                         <CardDescription>
-                          {t('enterRecipeToFind')}
+                          Enter a recipe name to find it directly.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="px-1 relative">
@@ -1079,7 +1077,7 @@ function RecipeSavvyContent() {
                             value={recipeName}
                             onChange={e => setRecipeName(e.target.value)}
                             onClick={() => isApiKeyMissing && ensureApiKey(false)}
-                            placeholder={t('recipePlaceholder')}
+                            placeholder={"e.g., Spaghetti Carbonara"}
                             className="flex-grow"
                             disabled={isApiKeyMissing}
                             autoComplete="off"
@@ -1110,16 +1108,16 @@ function RecipeSavvyContent() {
                 <div className="flex flex-wrap items-center space-x-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <Switch id="halal-mode" checked={isHalal} onCheckedChange={setIsHalal} disabled={isApiKeyMissing}/>
-                    <Label htmlFor="halal-mode">{t('halalMode')}</Label>
+                    <Label htmlFor="halal-mode">Halal Mode</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch id="allergens-mode" checked={useAllergens} onCheckedChange={setUseAllergens} disabled={isApiKeyMissing}/>
                     <Button variant="link" className="p-0 h-auto" onClick={() => setIsAllergensOpen(true)}>
-                      {t('allergens')}
+                      Allergens
                     </Button>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Label htmlFor="max-cook-time">{t('maxCookTime')}</Label>
+                    <Label htmlFor="max-cook-time">Max Cook Time (min)</Label>
                     <Input
                       id="max-cook-time"
                       type="number"
@@ -1131,7 +1129,7 @@ function RecipeSavvyContent() {
                           setMaxCookTime(value)
                       }}
                       className="w-24"
-                      placeholder={t('e_g_30')}
+                      placeholder={"e.g., 30"}
                       disabled={isApiKeyMissing}
                     />
                   </div>
@@ -1148,7 +1146,7 @@ function RecipeSavvyContent() {
                     ) : (
                       <Sparkles className="mr-2" />
                     )}
-                    {t('findRecipes')}
+                    Find Recipes
                   </Button>
 
                   <Button
@@ -1158,7 +1156,7 @@ function RecipeSavvyContent() {
                     className="w-full sm:w-auto"
                   >
                      <Dices className="mr-2" />
-                    {t('surpriseMe')}
+                    Surprise Me
                   </Button>
                 
                 {(ingredients.length > 0 || recipeName) && (
@@ -1170,7 +1168,7 @@ function RecipeSavvyContent() {
                     variant="ghost"
                     className="w-full sm:w-auto"
                   >
-                    {t('clear')}
+                    Clear
                   </Button>
                 )}
               </CardFooter>
@@ -1188,7 +1186,7 @@ function RecipeSavvyContent() {
                   >
                     <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
                     <p className="font-headline text-xl text-primary-foreground">
-                      {t('whippingUpIdeas')}
+                      Whipping up some ideas...
                     </p>
                   </motion.div>
                 )}
@@ -1196,7 +1194,7 @@ function RecipeSavvyContent() {
                 {!isGeneratingRecipes && generatedRecipes.length === 0 && (
                   <motion.div>
                      <h2 className="text-3xl font-headline text-center mb-6">
-                      {t('tryTheseRecipes')}
+                      Or, Try One of These Recipes!
                     </h2>
                     {isGeneratingSuggestions && (
                       <div className="flex justify-center">
@@ -1236,7 +1234,7 @@ function RecipeSavvyContent() {
                     transition={{ delay: 0.2 }}
                   >
                     <h2 className="text-3xl font-headline text-center mb-6">
-                      {t('heresWhatYouCanMake')}
+                      Here's What You Can Make
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1263,7 +1261,7 @@ function RecipeSavvyContent() {
                     </div>
                      {generatedRecipes.length > 4 && !showAllRecipes && (
                         <div className="mt-6 text-center">
-                            <Button onClick={() => setShowAllRecipes(true)}>{t('showMore')}</Button>
+                            <Button onClick={() => setShowAllRecipes(true)}>Show More</Button>
                         </div>
                     )}
                   </motion.div>
@@ -1283,7 +1281,7 @@ function RecipeSavvyContent() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <Button onClick={handleBackToSearch} variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> {t('backToSearch')}
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Search
             </Button>
             <Card className="shadow-lg">
               <CardHeader>
@@ -1313,7 +1311,7 @@ function RecipeSavvyContent() {
                             : ''
                         }
                       />
-                       <span className="sr-only">{t('addToCookbook')}</span>
+                       <span className="sr-only">Add to Cookbook</span>
                     </Button>
                   )}
                 </div>
@@ -1323,7 +1321,7 @@ function RecipeSavvyContent() {
                   <div className="flex flex-col items-center justify-center gap-4 py-16">
                     <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
                     <p className="font-headline text-xl text-primary-foreground">
-                      {t('fetchingDeliciousDetails')}
+                      Fetching delicious details...
                     </p>
                   </div>
                 )}
@@ -1334,7 +1332,7 @@ function RecipeSavvyContent() {
                       onClick={() => handleSelectRecipe(selectedRecipe!)}
                       className="mt-4"
                     >
-                      {t('tryAgain')}
+                      Try Again
                     </Button>
                   </div>
                 )}
@@ -1345,20 +1343,20 @@ function RecipeSavvyContent() {
                           <div className="flex items-center gap-2">
                             <Salad className="h-4 w-4" />
                             <div>
-                              <strong>{t('prep')}:</strong> {recipeDetails.data.prepTime}
+                              <strong>Prep:</strong> {recipeDetails.data.prepTime}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
                             <div>
-                              <strong>{t('cook')}:</strong> {recipeDetails.data.cookTime}
+                              <strong>Cook:</strong> {recipeDetails.data.cookTime}
                             </div>
                           </div>
                           {totalCookTime > 0 && (
                             <div className="flex items-center gap-2 font-bold text-foreground">
                               <Timer className="h-4 w-4" />
                               <div>
-                                <strong>{t('total')}:</strong> {formatTotalTime(totalCookTime)}
+                                <strong>Total:</strong> {formatTotalTime(totalCookTime)}
                               </div>
                             </div>
                           )}
@@ -1368,13 +1366,13 @@ function RecipeSavvyContent() {
                           onClick={() => setIsVariationOpen(true)}
                         >
                             <Wand2 className="mr-2 h-4 w-4" />
-                            {t('makeVariation')}
+                            Make a Variation
                         </Button>
                     </div>
 
                     <div>
                       <h3 className="font-headline text-xl mb-3 flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" /> {t('ingredients')}
+                        <BookOpen className="h-5 w-5" /> Ingredients
                       </h3>
                       <ul className="list-disc list-inside space-y-1 font-body columns-2">
                         {recipeDetails.data.ingredients.map((item, index) => (
@@ -1384,7 +1382,7 @@ function RecipeSavvyContent() {
                     </div>
                     <div>
                       <h3 className="font-headline text-xl mb-3 flex items-center gap-2">
-                        <ChefHat className="h-5 w-5" /> {t('instructions')}
+                        <ChefHat className="h-5 w-5" /> Instructions
                       </h3>
                       <ol className="list-decimal list-inside space-y-3 font-body">
                         {recipeDetails.data.instructions.map((step, index) => (
@@ -1404,7 +1402,7 @@ function RecipeSavvyContent() {
                     size="lg"
                     className="w-full"
                   >
-                    <ChefHat className="mr-2" /> {t('startCooking')}
+                    <ChefHat className="mr-2" /> Start Cooking!
                   </Button>
                 </CardFooter>
               )}
@@ -1429,7 +1427,7 @@ function RecipeSavvyContent() {
                         {selectedRecipe}
                         </CardTitle>
                         <CardDescription>
-                        {t('step', { currentStep: currentStep + 1, totalSteps: recipeDetails.data!.instructions.length })}
+                        Step {currentStep + 1} of {recipeDetails.data!.instructions.length}
                         </CardDescription>
                     </button>
                     {timer.isActive && (
@@ -1467,7 +1465,7 @@ function RecipeSavvyContent() {
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={handleGenerateStepDescription} disabled={!!currentStepDescription?.isLoading || !!currentStepDescription?.data}>
                     <Eye className="mr-2" />
-                    {t('whatShouldItLookLike')}
+                    What should it look like?
                   </Button>
                   <Button
                     variant="outline"
@@ -1478,17 +1476,17 @@ function RecipeSavvyContent() {
                     }}
                   >
                     <AlertTriangle className="mr-2" />
-                    {t('somethingsWrong')}
+                    Something's wrong...
                   </Button>
                    {currentStepTimedInfo && !timer.isActive && (
                     <Button onClick={() => startTimer(currentStepTimedInfo.durationInMinutes)}>
                         <Timer className="mr-2" />
-                        {t('startTimer', { duration: currentStepTimedInfo.durationInMinutes })}
+                        Start {currentStepTimedInfo.durationInMinutes} min Timer
                     </Button>
                     )}
                     {timer.isActive && timer.remaining <= 0 && (
                         <Button onClick={stopTimer} variant="destructive">
-                            {t('stopTimer')}
+                            Stop Timer
                         </Button>
                     )}
                 </div>
@@ -1498,15 +1496,15 @@ function RecipeSavvyContent() {
                   onClick={() => setCurrentStep((s) => s - 1)}
                   disabled={currentStep === 0}
                 >
-                  <ChevronLeft className="mr-2" /> {t('previousStep')}
+                  <ChevronLeft className="mr-2" /> Previous Step
                 </Button>
                 {currentStep < recipeDetails.data!.instructions.length - 1 ? (
                   <Button onClick={() => setCurrentStep(s => s + 1)}>
-                    {t('nextStep')} <ChevronRight className="ml-2" />
+                    Next Step <ChevronRight className="ml-2" />
                   </Button>
                 ) : (
                   <Button onClick={handleDoneCooking} className="bg-green-600 hover:bg-green-700">
-                    {t('imDone')}
+                    I'm Done!
                   </Button>
                 )}
               </CardFooter>
@@ -1527,15 +1525,15 @@ function RecipeSavvyContent() {
                     <div className="flex justify-center mb-4">
                       <PartyPopper className="h-16 w-16 text-accent" />
                     </div>
-                    <CardTitle className="font-headline text-4xl">{t('enjoyYourMeal')}</CardTitle>
-                    <CardDescription className="pt-2">{t('successfullyCooked', { recipeName: selectedRecipe })}</CardDescription>
+                    <CardTitle className="font-headline text-4xl">Enjoy Your Meal!</CardTitle>
+                    <CardDescription className="pt-2">You've successfully cooked {selectedRecipe}!</CardDescription>
                   </CardHeader>
                   <CardContent className="mt-6">
-                    <h3 className="font-headline text-2xl mb-4">{t('whatsNext')}</h3>
+                    <h3 className="font-headline text-2xl mb-4">What's Next?</h3>
                     {relatedRecipes.isLoading && (
                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
                            <LoaderCircle className="animate-spin h-5 w-5" />
-                           <span>{t('findingMoreRecipes')}</span>
+                           <span>Finding more recipes you might like...</span>
                        </div>
                     )}
                     {relatedRecipes.error && <p className="text-destructive">{relatedRecipes.error}</p>}
@@ -1551,18 +1549,18 @@ function RecipeSavvyContent() {
 
                     <div className="flex items-center justify-center gap-4 my-6">
                         <Separator className="flex-1" />
-                        <span className="text-muted-foreground text-sm">{t('or')}</span>
+                        <span className="text-muted-foreground text-sm">OR</span>
                         <Separator className="flex-1" />
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Button onClick={handleRemake} size="lg">
                             <Repeat className="mr-2"/>
-                            {t('remakeRecipe', { recipeName: selectedRecipe })}
+                            Remake {selectedRecipe}
                         </Button>
                          <Button onClick={handleStartOver} size="lg" variant="secondary">
                             <Home className="mr-2"/>
-                            {t('backToHome')}
+                            Back to Home
                         </Button>
                     </div>
 
@@ -1585,7 +1583,7 @@ function RecipeSavvyContent() {
                   RecipeSavvy
                 </h1>
                 <p className="text-muted-foreground font-body">
-                  {t('appSubtitle')}
+                  Your AI-powered recipe assistant
                 </p>
               </div>
             </button>
@@ -1600,11 +1598,11 @@ function RecipeSavvyContent() {
                 }}
               >
                 <BookHeart />
-                <span className="sr-only">{t('myCookbook')}</span>
+                <span className="sr-only">My Cookbook</span>
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
                 <Settings />
-                <span className="sr-only">{t('settings')}</span>
+                <span className="sr-only">Settings</span>
               </Button>
             </div>
           </div>
@@ -1619,7 +1617,7 @@ function RecipeSavvyContent() {
         </main>
 
         <footer className="text-center py-4 text-muted-foreground text-sm">
-          <p>{t('footer')}</p>
+          <p>Made By : TheVibeCod3r</p>
         </footer>
       </div>
 
@@ -1664,18 +1662,18 @@ function RecipeSavvyContent() {
       <Dialog open={isTroubleshootDialogOpen} onOpenChange={setIsTroubleshootDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>{t('somethingsWrong')}</DialogTitle>
+                <DialogTitle>Something's wrong?</DialogTitle>
                 <DialogDescription>
-                    {t('describeTheProblem')}
+                    Describe the problem you're facing. The more detail, the better the advice.
                 </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
                  <div className="p-4 bg-muted rounded-md">
-                   <p className="font-semibold text-sm">{t('currentStep')}:</p>
+                   <p className="font-semibold text-sm">Current Step:</p>
                    <p className="text-sm text-muted-foreground">{recipeDetails.data?.instructions[currentStep]}</p>
                  </div>
                  <Textarea 
-                    placeholder={t('troubleshootPlaceholder')}
+                    placeholder={"e.g., 'The sauce is too thin', 'My onions are burning'"}
                     value={troubleshootQuery}
                     onChange={(e) => setTroubleshootQuery(e.target.value)} 
                     rows={4}
@@ -1683,7 +1681,7 @@ function RecipeSavvyContent() {
                  {troubleshootingAdvice.isLoading && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <LoaderCircle className="animate-spin h-4 w-4" />
-                        {t('gettingAdvice')}...
+                        Getting advice from the chef...
                     </div>
                  )}
                  {troubleshootingAdvice.error && (
@@ -1691,17 +1689,17 @@ function RecipeSavvyContent() {
                  )}
                  {troubleshootingAdvice.data && (
                     <div className="p-4 bg-primary/10 rounded-md border border-primary/20 space-y-2">
-                        <h4 className="font-semibold">{t('chefsAdvice')}:</h4>
+                        <h4 className="font-semibold">Chef's Advice:</h4>
                         <p className="text-sm">{troubleshootingAdvice.data}</p>
                     </div>
                  )}
             </div>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button variant="ghost">{t('cancel')}</Button>
+                    <Button variant="ghost">Cancel</Button>
                 </DialogClose>
                 <Button onClick={handleTroubleshoot} disabled={!troubleshootQuery || troubleshootingAdvice.isLoading}>
-                    {t('getHelp')}
+                    Get Help
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -1710,9 +1708,9 @@ function RecipeSavvyContent() {
       <AlertDialog open={isConfirmDeleteDialogOpen} onOpenChange={setIsConfirmDeleteDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-                  <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                      {t('confirmRemoveCookbook', { recipeName: recipeToDelete })}
+                      This will permanently remove {recipeToDelete} from your cookbook.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="flex items-center space-x-2">
@@ -1721,11 +1719,11 @@ function RecipeSavvyContent() {
                     checked={dontAskAgain} 
                     onCheckedChange={(checked) => setDontAskAgain(checked as boolean)}
                   />
-                  <Label htmlFor="dont-ask-again">{t('dontAskAgain')}</Label>
+                  <Label htmlFor="dont-ask-again">Don't ask me again for 5 days.</Label>
               </div>
               <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setRecipeToDelete(null)}>{t('cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmRemove}>{t('continue')}</AlertDialogAction>
+                  <AlertDialogCancel onClick={() => setRecipeToDelete(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmRemove}>Continue</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
@@ -1735,10 +1733,8 @@ function RecipeSavvyContent() {
 
 export default function RecipeSavvyPage() {
   return (
-    <TranslationProvider>
-      <AppProvider>
-        <RecipeSavvyContent />
-      </AppProvider>
-    </TranslationProvider>
+    <AppProvider>
+      <RecipeSavvyContent />
+    </AppProvider>
   )
 }

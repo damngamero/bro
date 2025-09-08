@@ -19,7 +19,6 @@ import { Separator } from "@/components/ui/separator"
 import { LoaderCircle } from "lucide-react"
 import { type RecipeDetailsOutput } from "@/ai/flows/generate-recipe-details"
 import { type RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
-import { useTranslation } from "@/components/translation-provider"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -42,7 +41,6 @@ export function VariationDialog({
   model,
   onVariationCreated
 }: VariationDialogProps) {
-  const { t } = useTranslation();
   const [excludeIngredients, setExcludeIngredients] = useState<string[]>([])
   const [addons, setAddons] = useState<string>("")
   const [unavailableEquipment, setUnavailableEquipment] = useState("");
@@ -61,15 +59,15 @@ export function VariationDialog({
     if (!apiKey) {
       toast({
         variant: "destructive",
-        title: t('apiKeyMissing'),
+        title: 'API Key Missing',
       })
       return
     }
     if (excludeIngredients.length === 0 && !addons.trim() && !unavailableEquipment.trim()) {
         toast({
             variant: "destructive",
-            title: t('noChangesRequested'),
-            description: t('noChangesRequestedDescription'),
+            title: 'No Changes Requested',
+            description: 'Please select an ingredient to remove or add a new one.',
         });
         return;
     }
@@ -100,8 +98,8 @@ export function VariationDialog({
       } else {
         toast({
           variant: "destructive",
-          title: t('variationNotPossible'),
-          description: result.reason || t('couldNotCreateVariation'),
+          title: 'Variation Not Possible',
+          description: result.reason || "The AI chef couldn't create a variation with the requested changes.",
           duration: 8000
         })
       }
@@ -109,8 +107,8 @@ export function VariationDialog({
       console.error(error)
       toast({
         variant: "destructive",
-        title: t('error'),
-        description: t('failedToGenerateVariation'),
+        title: 'Error',
+        description: 'Failed to generate variation. Please try again.',
       })
     } finally {
       setIsLoading(false)
@@ -121,18 +119,18 @@ export function VariationDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t('createVariation')}</DialogTitle>
+          <DialogTitle>Create a Variation</DialogTitle>
           <DialogDescription>
-            {t('createVariationDescription', { recipeName })}
+            Modify '{recipeName}' by adding or removing ingredients, or noting unavailable equipment.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
           <div>
             <Label className="text-base font-medium">
-              {t('removeIngredients')}
+              Remove Ingredients
             </Label>
             <p className="text-sm text-muted-foreground pb-2">
-              {t('removeIngredientsDescription')}
+              Select ingredients from the original recipe to exclude.
             </p>
             <div className="space-y-2">
               {recipeDetails.ingredients.map((ingredient) => (
@@ -155,41 +153,41 @@ export function VariationDialog({
           <Separator />
           <div>
             <Label htmlFor="addons" className="text-base font-medium">
-              {t('tryDifferentAddons')}
+              Try Different Add-ons
             </Label>
              <p className="text-sm text-muted-foreground pb-2">
-              {t('addAddonsDescription')}
+              List new ingredients to add, separated by commas.
             </p>
             <Input
               id="addons"
               value={addons}
               onChange={(e) => setAddons(e.target.value)}
-              placeholder={t('addonsPlaceholder')}
+              placeholder={"e.g., Cayenne Pepper, Lime Juice"}
             />
           </div>
            <Separator />
           <div>
             <Label htmlFor="unavailable-equipment" className="text-base font-medium">
-              {t('unavailableEquipment')}
+              Unavailable Equipment
             </Label>
              <p className="text-sm text-muted-foreground pb-2">
-              {t('unavailableEquipmentDescription')}
+              List any equipment you don't have, separated by commas.
             </p>
             <Input
               id="unavailable-equipment"
               value={unavailableEquipment}
               onChange={(e) => setUnavailableEquipment(e.target.value)}
-              placeholder={t('unavailableEquipmentPlaceholder')}
+              placeholder={"e.g., Oven, Food Processor"}
             />
           </div>
         </div>
         <DialogFooter>
             <DialogClose asChild>
-                <Button variant="ghost">{t('cancel')}</Button>
+                <Button variant="ghost">Cancel</Button>
             </DialogClose>
             <Button onClick={handleGenerateVariation} disabled={isLoading}>
                 {isLoading && <LoaderCircle className="animate-spin mr-2" />}
-                {t('generateVariation')}
+                Generate Variation
             </Button>
         </DialogFooter>
       </DialogContent>
