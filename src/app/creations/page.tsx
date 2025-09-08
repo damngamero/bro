@@ -10,7 +10,7 @@ const creations = [
         title: 'VerdantWise',
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
-        image: 'https://images.unsplash.com/photo-1757328191329-74fa60009c09?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        image: 'https://i.ibb.co/JjMvssQB/imgonline-com-ua-resize-MPX297khzml0-Cdf.jpg',
         external: true,
     },
     {
