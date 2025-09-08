@@ -19,10 +19,10 @@ import { Eye, EyeOff, Moon, Sun, Check, ChevronsUpDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
 import { cn } from "@/lib/utils"
-import { useTranslation } from "react-i18next"
-import { languages } from "@/lib/i18n"
+import { languages } from "@/lib/languages"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command"
+import { useTranslation } from "@/components/translation-provider"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -37,7 +37,7 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, model, onModelChange }: SettingsDialogProps) {
   const { setTheme, theme } = useTheme()
-  const { t, i18n } = useTranslation();
+  const { t, setLanguage, language } = useTranslation();
   const [localApiKey, setLocalApiKey] = useState(apiKey || "");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
@@ -70,7 +70,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
   }
 
   const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    setLanguage(langCode);
     setLangPopoverOpen(false);
   }
 
@@ -167,7 +167,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
                         aria-expanded={langPopoverOpen}
                         className="w-full justify-between"
                       >
-                        {languages.find((lang) => lang.code === i18n.language)?.name || i18n.language}
+                        {languages.find((lang) => lang.code === language)?.name || language}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -186,7 +186,7 @@ export function SettingsDialog({ isOpen, onOpenChange, apiKey, onApiKeyChange, m
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    i18n.language === lang.code ? "opacity-100" : "opacity-0"
+                                    language === lang.code ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 {lang.name}

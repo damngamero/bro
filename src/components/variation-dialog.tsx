@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator"
 import { LoaderCircle } from "lucide-react"
 import { type RecipeDetailsOutput } from "@/ai/flows/generate-recipe-details"
 import { type RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
-import { useTranslation } from "react-i18next"
+import { useTranslation } from "@/components/translation-provider"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 

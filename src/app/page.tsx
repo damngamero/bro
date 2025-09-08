@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, FormEvent, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { RecipeDetailsOutput } from '@/ai/flows/generate-recipe-details';
 import type { IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -75,9 +75,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionsList } from '@/components/suggestions-list';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useTranslation } from 'react-i18next';
 import { AppProvider } from '@/components/app-provider';
-import '@/lib/i18n';
+import { useTranslation, TranslationProvider } from '@/components/translation-provider';
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
 
@@ -114,7 +113,7 @@ const CONFIRM_DELETE_COOL_DOWN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
 
 function RecipeSavvyContent() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<View>('search');
   const [previousState, setPreviousState] = useState<PreviousState>(null);
@@ -1430,7 +1429,7 @@ function RecipeSavvyContent() {
                         {selectedRecipe}
                         </CardTitle>
                         <CardDescription>
-                        {t('step')} {currentStep + 1} {t('of')} {recipeDetails.data!.instructions.length}
+                        {t('step', { currentStep: currentStep + 1, totalSteps: recipeDetails.data!.instructions.length })}
                         </CardDescription>
                     </button>
                     {timer.isActive && (
@@ -1736,8 +1735,10 @@ function RecipeSavvyContent() {
 
 export default function RecipeSavvyPage() {
   return (
-    <AppProvider>
-      <RecipeSavvyContent />
-    </AppProvider>
+    <TranslationProvider>
+      <AppProvider>
+        <RecipeSavvyContent />
+      </AppProvider>
+    </TranslationProvider>
   )
 }

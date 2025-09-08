@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
-import { useTranslation } from "react-i18next"
+import { useTranslation } from "@/components/translation-provider"
 
 const COMMON_ALLERGENS = ["Peanuts", "Tree nuts", "Milk", "Egg", "Soy", "Wheat", "Fish", "Shellfish", "Gluten"];
 

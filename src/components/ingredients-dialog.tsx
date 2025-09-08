@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { X, Search } from "lucide-react"
 import { INGREDIENT_LIST } from "@/lib/ingredients"
-import { useTranslation } from "react-i18next"
+import { useTranslation } from "@/components/translation-provider"
 
 interface IngredientsDialogProps {
   isOpen: boolean
