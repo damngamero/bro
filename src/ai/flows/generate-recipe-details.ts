@@ -1,6 +1,6 @@
 'use server';
 
-import {ai} from '@/ai/genkit';
+import { getAi } from '@/ai/genkit';
 import {z} from 'genkit';
 import {ModelId} from '@genkit-ai/googleai';
 
@@ -8,7 +8,7 @@ const RecipeDetailsInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe to get details for.'),
   halalMode: z.boolean().optional().describe('Whether to make the recipe halal.'),
   allergens: z.array(z.string()).optional().describe('A list of allergens to avoid.'),
-  apiKey: z.string().describe('Google AI API key.'),
+  apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().describe('The model to use for generation.'),
 });
 export type RecipeDetailsInput = z.infer<typeof RecipeDetailsInputSchema>;
@@ -25,39 +25,29 @@ export type RecipeDetailsOutput = z.infer<typeof RecipeDetailsOutputSchema>;
 export async function generateRecipeDetails(
   input: RecipeDetailsInput
 ): Promise<RecipeDetailsOutput> {
-  return generateRecipeDetailsFlow(input);
+  const ai = await getAi(input.apiKey);
+
+  const prompt = ai.definePrompt({
+    name: 'generateRecipeDetailsPrompt',
+    input: {schema: RecipeDetailsInputSchema},
+    output: {schema: RecipeDetailsOutputSchema},
+    prompt: `You are a world-class chef. A user wants to cook "{{recipeName}}". 
+    
+    {{#if halalMode}}The user requires a halal version of this recipe. Ensure all ingredients and preparation steps are halal.{{/if}}
+    {{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Ensure the recipe does not contain these ingredients.{{/if}}
+
+    Provide a detailed recipe including:
+    1. A short, mouth-watering description of the dish.
+    2. A list of all necessary ingredients.
+    3. Step-by-step cooking instructions.
+    4. The preparation time.
+    5. The cooking time.
+    
+    Please format the output as a JSON object that matches the provided schema.`,
+  });
+
+  const {output} = await prompt(input, {
+    model: input.model as ModelId,
+  });
+  return output!;
 }
-
-const prompt = ai.definePrompt({
-  name: 'generateRecipeDetailsPrompt',
-  input: {schema: RecipeDetailsInputSchema},
-  output: {schema: RecipeDetailsOutputSchema},
-  prompt: `You are a world-class chef. A user wants to cook "{{recipeName}}". 
-  
-  {{#if halalMode}}The user requires a halal version of this recipe. Ensure all ingredients and preparation steps are halal.{{/if}}
-  {{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Ensure the recipe does not contain these ingredients.{{/if}}
-
-  Provide a detailed recipe including:
-  1. A short, mouth-watering description of the dish.
-  2. A list of all necessary ingredients.
-  3. Step-by-step cooking instructions.
-  4. The preparation time.
-  5. The cooking time.
-  
-  Please format the output as a JSON object that matches the provided schema.`,
-});
-
-const generateRecipeDetailsFlow = ai.defineFlow(
-  {
-    name: 'generateRecipeDetailsFlow',
-    inputSchema: RecipeDetailsInputSchema,
-    outputSchema: RecipeDetailsOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input, {
-      model: input.model as ModelId,
-      config: { apiKey: input.apiKey },
-    });
-    return output!;
-  }
-);

@@ -4,7 +4,7 @@
  * @fileOverview Generates a random, useful tip about the application's functionality.
  */
 
-import { ai } from '@/ai/genkit';
+import { getAi } from '@/ai/genkit';
 import { z } from 'zod';
 import { ModelId } from '@genkit-ai/googleai';
 
@@ -13,7 +13,7 @@ const GenerateCookingTipInputSchema = z.object({
   context: z.object({
     view: z.string().describe("The user's current view in the app (e.g., 'search', 'cooking')."),
   }).optional().describe('The context of where the user is in the app.'),
-  apiKey: z.string().describe('Google AI API key.'),
+  apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().describe('The model to use for generation.'),
 });
 
@@ -28,17 +28,10 @@ export type GenerateCookingTipOutput = z.infer<typeof GenerateCookingTipOutputSc
 export async function generateCookingTip(
   input: GenerateCookingTipInput
 ): Promise<GenerateCookingTipOutput> {
-  return generateCookingTipFlow(input);
-}
+  const { previousTips, context, apiKey, model } = input;
+  const ai = await getAi(apiKey);
 
-const generateCookingTipFlow = ai.defineFlow(
-  {
-    name: 'generateCookingTipFlow',
-    inputSchema: GenerateCookingTipInputSchema,
-    outputSchema: GenerateCookingTipOutputSchema,
-  },
-  async ({ previousTips, context, apiKey, model }) => {
-    let prompt = `You are a helpful assistant for a recipe application called RecipeSavvy. Your goal is to provide a single, useful tip about the app's functionality.
+  let promptText = `You are a helpful assistant for a recipe application called RecipeSavvy. Your goal is to provide a single, useful tip about the app's functionality.
 
 The app has the following features:
 - Finding recipes by ingredients or by name.
@@ -55,17 +48,17 @@ The tip should be about using one of these features. It should be concise and ea
 `;
 
     if (context?.view === 'cooking') {
-      prompt += `
+      promptText += `
 The user is currently in 'Cooking Mode'. Provide a tip relevant to the features available in this mode.`;
     } else if (context?.view === 'details') {
-       prompt += `
+       promptText += `
 The user is currently viewing a recipe's details. Provide a tip about the Cookbook or Recipe Variation features.`;
     } else {
-      prompt += `
+      promptText += `
 Provide a general tip about finding recipes, managing settings, or using the allergen filters.`;
     }
 
-    prompt += `
+    promptText += `
 
 To ensure variety, please do not repeat any of the following previously shown tips:
 ${previousTips.map(tip => `- ${tip}`).join('\n')}
@@ -73,12 +66,10 @@ ${previousTips.map(tip => `- ${tip}`).join('\n')}
 Please provide one new, unique, and helpful tip about using the app. Frame it as a helpful suggestion.`;
 
     const { output } = await ai.generate({
-      prompt,
+      prompt: promptText,
       model: model as ModelId,
       output: { schema: GenerateCookingTipOutputSchema },
-      config: { apiKey },
     });
 
     return output!;
-  }
-);
+}

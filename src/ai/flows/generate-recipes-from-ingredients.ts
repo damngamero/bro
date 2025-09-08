@@ -8,7 +8,7 @@
  * - GenerateRecipesFromIngredientsOutput - The return type for the generateRecipesFromIngredients function.
  */
 
-import {ai} from '@/ai/genkit';
+import { getAi } from '@/ai/genkit';
 import {z} from 'genkit';
 import {ModelId} from '@genkit-ai/googleai';
 
@@ -19,7 +19,7 @@ const GenerateRecipesFromIngredientsInputSchema = z.object({
   halalMode: z.boolean().optional().describe('Whether to only suggest halal recipes.'),
   allergens: z.array(z.string()).optional().describe('A list of allergens to avoid.'),
   maxCookTime: z.number().optional().describe('The maximum total cooking time in minutes.'),
-  apiKey: z.string().describe('Google AI API key.'),
+  apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().describe('The model to use for generation.'),
 });
 export type GenerateRecipesFromIngredientsInput = z.infer<
@@ -38,33 +38,23 @@ export type GenerateRecipesFromIngredientsOutput = z.infer<
 export async function generateRecipesFromIngredients(
   input: GenerateRecipesFromIngredientsInput
 ): Promise<GenerateRecipesFromIngredientsOutput> {
-  return generateRecipesFromIngredientsFlow(input);
-}
+  const ai = await getAi(input.apiKey);
 
-const prompt = ai.definePrompt({
-  name: 'generateRecipesFromIngredientsPrompt',
-  input: {schema: GenerateRecipesFromIngredientsInputSchema},
-  output: {schema: GenerateRecipesFromIngredientsOutputSchema},
-  prompt: `You are a recipe expert. A user has the following ingredients. Suggest 8-10 diverse recipes they can make. Prioritize recipes that use more of the provided ingredients.
+  const prompt = ai.definePrompt({
+    name: 'generateRecipesFromIngredientsPrompt',
+    input: {schema: GenerateRecipesFromIngredientsInputSchema},
+    output: {schema: GenerateRecipesFromIngredientsOutputSchema},
+    prompt: `You are a recipe expert. A user has the following ingredients. Suggest 8-10 diverse recipes they can make. Prioritize recipes that use more of the provided ingredients.
 {{#if halalMode}}Only suggest halal recipes.{{/if}}
 {{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Do not suggest recipes containing these ingredients.{{/if}}
 {{#if maxCookTime}}The total time (prep + cook) for each recipe must not exceed {{maxCookTime}} minutes.{{/if}}
 
 Ingredients:
 {{#each ingredients}}- {{this}}\n{{/each}}`,
-});
+  });
 
-const generateRecipesFromIngredientsFlow = ai.defineFlow(
-  {
-    name: 'generateRecipesFromIngredientsFlow',
-    inputSchema: GenerateRecipesFromIngredientsInputSchema,
-    outputSchema: GenerateRecipesFromIngredientsOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input, {
-      model: input.model as ModelId,
-      config: { apiKey: input.apiKey },
-    });
-    return output!;
-  }
-);
+  const {output} = await prompt(input, {
+    model: input.model as ModelId,
+  });
+  return output!;
+}

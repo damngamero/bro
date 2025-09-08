@@ -4,7 +4,7 @@
  * @fileOverview Provides troubleshooting advice for a specific cooking step.
  */
 
-import { ai } from '@/ai/genkit';
+import { getAi } from '@/ai/genkit';
 import { z } from 'genkit';
 import {ModelId} from '@genkit-ai/googleai';
 
@@ -12,7 +12,7 @@ const TroubleshootStepInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
   instruction: z.string().describe('The cooking instruction where the user is having trouble.'),
   problem: z.string().describe("The user's description of what's going wrong."),
-  apiKey: z.string().describe('Google AI API key.'),
+  apiKey: z.string().optional().describe('Google AI API key.'),
   model: z.string().describe('The model to use for generation.'),
 });
 
@@ -27,17 +27,10 @@ export type TroubleshootStepOutput = z.infer<typeof TroubleshootStepOutputSchema
 export async function troubleshootStep(
   input: TroubleshootStepInput
 ): Promise<TroubleshootStepOutput> {
-  return troubleshootStepFlow(input);
-}
-
-const troubleshootStepFlow = ai.defineFlow(
-  {
-    name: 'troubleshootStepFlow',
-    inputSchema: TroubleshootStepInputSchema,
-    outputSchema: TroubleshootStepOutputSchema,
-  },
-  async ({ recipeName, instruction, problem, apiKey, model }) => {
-    const prompt = `You are an expert chef and cooking instructor. A user is having trouble making a recipe and needs help.
+  const { recipeName, instruction, problem, apiKey, model } = input;
+  const ai = await getAi(apiKey);
+  
+  const prompt = `You are an expert chef and cooking instructor. A user is having trouble making a recipe and needs help.
 
 Recipe: ${recipeName}
 The step they are on: "${instruction}"
@@ -49,9 +42,7 @@ Provide clear, concise, and encouraging advice to help them fix the problem and 
       prompt,
       model: model as ModelId,
       output: { schema: TroubleshootStepOutputSchema },
-      config: { apiKey },
     });
     
     return output!;
-  }
-);
+}
