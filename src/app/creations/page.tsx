@@ -1,16 +1,24 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
 const creations = [
     {
+        title: 'RecipeSavvy',
+        description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
+        link: '/',
+        image: '/recipesavvy-screenshot.jpg',
+        internal: true,
+    },
+    {
         title: 'VerdantWise',
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
-        image: '/verdantwise-screenshot.jpg' // You will need to add this image to your public folder
+        image: '/verdantwise-screenshot.jpg',
+        internal: false,
     }
 ]
 
@@ -47,12 +55,21 @@ export default function CreationsPage() {
                                 <CardDescription>{creation.description}</CardDescription>
                             </CardHeader>
                             <CardFooter>
-                                <a href={creation.link} target="_blank" rel="noopener noreferrer" className="w-full">
-                                    <Button className="w-full">
-                                        View Project
-                                        <ArrowUpRight className="ml-2 h-4 w-4" />
-                                    </Button>
-                                </a>
+                                {creation.internal ? (
+                                    <Link href={creation.link} className="w-full">
+                                        <Button className="w-full">
+                                            <Home className="mr-2 h-4 w-4" />
+                                            Go to App
+                                        </Button>
+                                    </Link>
+                                ) : (
+                                     <a href={creation.link} target="_blank" rel="noopener noreferrer" className="w-full">
+                                        <Button className="w-full">
+                                            View Project
+                                            <ArrowUpRight className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </a>
+                                )}
                             </CardFooter>
                         </Card>
                     ))}
