@@ -11,14 +11,14 @@ const creations = [
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
         image: '/verdantwise-screenshot.jpg',
-        internal: false,
+        external: true,
     },
     {
         title: 'RecipeSavvy',
         description: 'Your AI-powered recipe assistant. Find recipes with what you have, get cooking help, and create variations.',
-        link: '/',
+        link: 'https://recipesavvy.vercel.app/',
         image: '/recipesavvy-screenshot.jpg',
-        internal: true,
+        external: false,
     },
 ]
 
@@ -55,21 +55,12 @@ export default function CreationsPage() {
                                 <CardDescription>{creation.description}</CardDescription>
                             </CardHeader>
                             <CardFooter>
-                                {creation.internal ? (
-                                    <Link href={creation.link} className="w-full">
-                                        <Button className="w-full">
-                                            <Home className="mr-2 h-4 w-4" />
-                                            Go to App
-                                        </Button>
-                                    </Link>
-                                ) : (
-                                     <a href={creation.link} target="_blank" rel="noopener noreferrer" className="w-full">
-                                        <Button className="w-full">
-                                            Go to App
-                                            <ArrowUpRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </a>
-                                )}
+                                <a href={creation.link} target={creation.external ? '_blank' : '_self'} rel="noopener noreferrer" className="w-full">
+                                    <Button className="w-full">
+                                        Go to App
+                                        {creation.external && <ArrowUpRight className="ml-2 h-4 w-4" />}
+                                    </Button>
+                                </a>
                             </CardFooter>
                         </Card>
                     ))}
