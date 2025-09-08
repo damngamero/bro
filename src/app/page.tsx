@@ -1,18 +1,8 @@
 'use client';
 
 import { useState, useCallback, FormEvent, useRef, useEffect } from 'react';
-import { generateRecipesFromIngredients } from '@/ai/flows/generate-recipes-from-ingredients';
-import {
-  generateRecipeDetails,
-  type RecipeDetailsOutput,
-} from '@/ai/flows/generate-recipe-details';
-import { generateStepDescription } from '@/ai/flows/generate-step-description';
-import { troubleshootStep } from '@/ai/flows/troubleshoot-step';
-import { generateRelatedRecipes } from '@/ai/flows/generate-related-recipes';
-import { identifyTimedSteps, type IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
-import { generateCookingTip } from '@/ai/flows/generate-cooking-tip';
-import { generateRandomRecipes } from '@/ai/flows/generate-random-recipes';
-import { suggestRecipes } from '@/ai/flows/suggest-recipes';
+import type { RecipeDetailsOutput } from '@/ai/flows/generate-recipe-details';
+import type { IdentifyTimedStepsOutput } from '@/ai/flows/identify-timed-steps';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,7 +131,7 @@ export default function RecipeSavvyPage() {
   const [showAllRecipes, setShowAllRecipes] = useState(false);
   
   const [suggestedRecipes, setSuggestedRecipes] = useState<string[]>([]);
-  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(true);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
   const [recipeNameSuggestions, setRecipeNameSuggestions] = useState<string[]>([]);
   const [isSuggestingRecipeNames, setIsSuggestingRecipeNames] = useState(false);
@@ -226,13 +216,24 @@ export default function RecipeSavvyPage() {
             } else if (view === 'details' && selectedRecipe) {
                 context.recipeName = selectedRecipe;
             }
-
-            const { tip } = await generateCookingTip({ 
-                previousTips: shownTips, 
+            
+            const response = await fetch('/api/generate-tip', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                previousTips: shownTips,
                 context,
-                apiKey: apiKey!, 
-                model 
+                apiKey,
+                model
+              }),
             });
+
+            if (!response.ok) {
+              throw new Error(`API Error: ${response.statusText}`);
+            }
+
+            const { tip } = await response.json();
+            
             setShownTips(prev => [...prev, tip]);
             setTipCountLast30Min(prev => prev + 1);
 
@@ -298,8 +299,8 @@ export default function RecipeSavvyPage() {
   }, []);
   
   useEffect(() => {
-    if (apiKey) {
-      fetchSuggestions();
+    if (apiKey && suggestedRecipes.length === 0) {
+      fetchInitialSuggestions();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
@@ -325,15 +326,17 @@ export default function RecipeSavvyPage() {
     }
   }, [scheduleNextTip]);
 
-  const fetchSuggestions = async () => {
+  const fetchInitialSuggestions = async () => {
     if (!apiKey) return;
     setIsGeneratingSuggestions(true);
     try {
-      const { recipes } = await generateRandomRecipes({
-        count: 2,
-        apiKey: apiKey!,
-        model,
+      const response = await fetch('/api/random-recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 2, apiKey, model }),
       });
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      const { recipes } = await response.json();
       setSuggestedRecipes(recipes);
     } catch (error) {
       console.error("Failed to fetch suggested recipes:", error);
@@ -343,22 +346,28 @@ export default function RecipeSavvyPage() {
   };
 
    useEffect(() => {
-    if (debouncedRecipeName.length > 2 && ensureApiKey(false)) {
-      setIsSuggestingRecipeNames(true);
-      suggestRecipes({
-        query: debouncedRecipeName,
-        apiKey: apiKey!,
-        model,
-      }).then(result => {
-        setRecipeNameSuggestions(result.suggestions);
-        setIsSuggestingRecipeNames(false);
-      }).catch(err => {
-        console.error("Failed to fetch recipe name suggestions:", err);
-        setIsSuggestingRecipeNames(false);
-      });
-    } else {
-      setRecipeNameSuggestions([]);
+    const fetchRecipeNameSuggestions = async () => {
+        if (debouncedRecipeName.length > 2 && ensureApiKey(false)) {
+            setIsSuggestingRecipeNames(true);
+            try {
+                const response = await fetch('/api/suggest-recipes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: debouncedRecipeName, apiKey, model }),
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                setRecipeNameSuggestions(result.suggestions);
+            } catch (err) {
+                console.error("Failed to fetch recipe name suggestions:", err);
+            } finally {
+                setIsSuggestingRecipeNames(false);
+            }
+        } else {
+            setRecipeNameSuggestions([]);
+        }
     }
+    fetchRecipeNameSuggestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedRecipeName, apiKey, model]);
   
@@ -367,7 +376,7 @@ export default function RecipeSavvyPage() {
     if (newApiKey) {
         setIsApiKeyMissing(false);
         if (suggestedRecipes.length === 0) {
-          fetchSuggestions();
+          fetchInitialSuggestions();
         }
     } else {
         setIsApiKeyMissing(true);
@@ -426,41 +435,65 @@ export default function RecipeSavvyPage() {
       }
 
       if (options?.newDetails) {
-        const timedStepsResult = await identifyTimedSteps({
-          instructions: options.newDetails.instructions,
-          apiKey: apiKey!,
-          model,
+        const timedStepsResponse = await fetch('/api/identify-timed-steps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instructions: options.newDetails.instructions,
+              apiKey,
+              model,
+            }),
         });
+        const timedStepsResult = await timedStepsResponse.json();
         setRecipeDetails({ isLoading: false, data: options.newDetails, error: null, timedSteps: timedStepsResult.timedSteps });
         return;
       }
       
       const cookbookRecipe = cookbook.find(f => f.name === recipeName);
       if (cookbookRecipe) {
-        const timedStepsResult = await identifyTimedSteps({
-            instructions: cookbookRecipe.details.instructions,
-            apiKey: apiKey!,
-            model,
+        const timedStepsResponse = await fetch('/api/identify-timed-steps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                instructions: cookbookRecipe.details.instructions,
+                apiKey,
+                model,
+            }),
         });
+        const timedStepsResult = await timedStepsResponse.json();
         setRecipeDetails({ isLoading: false, data: cookbookRecipe.details, error: null, timedSteps: timedStepsResult.timedSteps });
         return;
       }
       
       try {
         setRecipeDetails({ isLoading: true, data: null, error: null, timedSteps: [] });
-        const details = await generateRecipeDetails({
-          recipeName,
-          halalMode: isHalal,
-          allergens: useAllergens ? allergens : undefined,
-          apiKey: apiKey!,
-          model,
+        const detailsResponse = await fetch('/api/recipe-details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipeName,
+              halalMode: isHalal,
+              allergens: useAllergens ? allergens : undefined,
+              apiKey,
+              model,
+            }),
         });
 
-        const timedStepsResult = await identifyTimedSteps({
-            instructions: details.instructions,
-            apiKey: apiKey!,
-            model,
+        if (!detailsResponse.ok) throw new Error(`API Error: ${detailsResponse.statusText}`);
+        const details = await detailsResponse.json();
+
+        const timedStepsResponse = await fetch('/api/identify-timed-steps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                instructions: details.instructions,
+                apiKey,
+                model,
+            }),
         });
+        
+        if (!timedStepsResponse.ok) throw new Error(`API Error: ${timedStepsResponse.statusText}`);
+        const timedStepsResult = await timedStepsResponse.json();
         
         setRecipeDetails({ isLoading: false, data: details, error: null, timedSteps: timedStepsResult.timedSteps });
       } catch (error) {
@@ -515,14 +548,25 @@ export default function RecipeSavvyPage() {
 
     try {
       const time = parseInt(maxCookTime, 10);
-      const result = await generateRecipesFromIngredients({
-        ingredients,
-        halalMode: isHalal,
-        allergens: useAllergens ? allergens : undefined,
-        maxCookTime: isNaN(time) ? undefined : time,
-        apiKey: apiKey!,
-        model,
+      const response = await fetch('/api/generate-recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients,
+          halalMode: isHalal,
+          allergens: useAllergens ? allergens : undefined,
+          maxCookTime: isNaN(time) ? undefined : time,
+          apiKey: apiKey!,
+          model,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+
       if (result.recipes.length === 0) {
         toast({
           title: t('noRecipesFound'),
@@ -548,7 +592,14 @@ export default function RecipeSavvyPage() {
     
     setIsGeneratingRecipes(true); // Use the same loading state for a consistent feel
     try {
-      const { recipes } = await generateRandomRecipes({ count: 1, apiKey: apiKey!, model });
+      const response = await fetch('/api/random-recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 1, apiKey, model }),
+      });
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      const { recipes } = await response.json();
+
       if (recipes && recipes.length > 0) {
         await handleSelectRecipe(recipes[0]);
       } else {
@@ -697,12 +748,19 @@ export default function RecipeSavvyPage() {
     }));
 
     try {
-      const result = await generateStepDescription({
-        recipeName: selectedRecipe!,
-        instruction: recipeDetails.data.instructions[currentStep],
-        apiKey: apiKey!,
-        model,
+      const response = await fetch('/api/step-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeName: selectedRecipe!,
+          instruction: recipeDetails.data.instructions[currentStep],
+          apiKey,
+          model,
+        }),
       });
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      const result = await response.json();
+
       setStepDescriptionsCache(prev => ({
         ...prev,
         [currentStep]: { isLoading: false, data: result.description, error: null }
@@ -725,13 +783,20 @@ export default function RecipeSavvyPage() {
     if (!ensureApiKey() || !recipeDetails.data || !troubleshootQuery) return;
     setTroubleshootingAdvice({ isLoading: true, data: null, error: null });
     try {
-      const result = await troubleshootStep({
-        recipeName: selectedRecipe!,
-        instruction: recipeDetails.data.instructions[currentStep],
-        problem: troubleshootQuery,
-        apiKey: apiKey!,
-        model,
+      const response = await fetch('/api/troubleshoot-step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeName: selectedRecipe!,
+          instruction: recipeDetails.data.instructions[currentStep],
+          problem: troubleshootQuery,
+          apiKey,
+          model,
+        }),
       });
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      const result = await response.json();
+
       setTroubleshootingAdvice({ isLoading: false, data: result.advice, error: null });
     } catch (error) {
       console.error(error);
@@ -749,7 +814,14 @@ export default function RecipeSavvyPage() {
     if (!ensureApiKey() || !selectedRecipe) return;
     setRelatedRecipes({ isLoading: true, data: null, error: null });
     try {
-      const result = await generateRelatedRecipes({ recipeName: selectedRecipe, apiKey: apiKey!, model });
+      const response = await fetch('/api/related-recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeName: selectedRecipe, apiKey, model }),
+      });
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      const result = await response.json();
+
       setRelatedRecipes({ isLoading: false, data: result.recipes, error: null });
     } catch(error) {
       console.error(error);

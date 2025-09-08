@@ -27,14 +27,10 @@ export async function generateRecipeDetails(
 ): Promise<RecipeDetailsOutput> {
   const ai = await getAi(input.apiKey);
 
-  const prompt = ai.definePrompt({
-    name: 'generateRecipeDetailsPrompt',
-    input: {schema: RecipeDetailsInputSchema},
-    output: {schema: RecipeDetailsOutputSchema},
-    prompt: `You are a world-class chef. A user wants to cook "{{recipeName}}". 
+  const prompt = `You are a world-class chef. A user wants to cook "${input.recipeName}". 
     
-    {{#if halalMode}}The user requires a halal version of this recipe. Ensure all ingredients and preparation steps are halal.{{/if}}
-    {{#if allergens}}The user is allergic to the following: {{#each allergens}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. Ensure the recipe does not contain these ingredients.{{/if}}
+    ${input.halalMode ? 'The user requires a halal version of this recipe. Ensure all ingredients and preparation steps are halal.' : ''}
+    ${input.allergens && input.allergens.length > 0 ? `The user is allergic to the following: ${input.allergens.join(', ')}. Ensure the recipe does not contain these ingredients.` : ''}
 
     Provide a detailed recipe including:
     1. A short, mouth-watering description of the dish.
@@ -43,11 +39,12 @@ export async function generateRecipeDetails(
     4. The preparation time.
     5. The cooking time.
     
-    Please format the output as a JSON object that matches the provided schema.`,
-  });
+    Please format the output as a JSON object that matches the provided schema.`;
 
-  const {output} = await prompt(input, {
+  const {output} = await ai.generate({
+    prompt: prompt,
     model: input.model as ModelId,
+    output: { schema: RecipeDetailsOutputSchema },
   });
   return output!;
 }

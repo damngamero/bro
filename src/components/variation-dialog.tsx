@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { LoaderCircle } from "lucide-react"
 import { type RecipeDetailsOutput } from "@/ai/flows/generate-recipe-details"
-import { generateRecipeVariation, RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
+import { type RecipeVariationOutput } from "@/ai/flows/generate-recipe-variation"
 import { useTranslation } from "react-i18next"
 
 type ModelId = 'googleai/gemini-2.5-flash' | 'googleai/gemini-2.5-pro';
@@ -76,14 +76,24 @@ export function VariationDialog({
 
     setIsLoading(true)
     try {
-      const result: RecipeVariationOutput = await generateRecipeVariation({
-        recipeName,
-        ingredientsToExclude: excludeIngredients,
-        addons: addons.split(',').map(a => a.trim()).filter(Boolean),
-        unavailableEquipment: unavailableEquipment.split(',').map(e => e.trim()).filter(Boolean),
-        apiKey,
-        model,
-      })
+      const response = await fetch('/api/generate-variation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeName,
+          ingredientsToExclude: excludeIngredients,
+          addons: addons.split(',').map(a => a.trim()).filter(Boolean),
+          unavailableEquipment: unavailableEquipment.split(',').map(e => e.trim()).filter(Boolean),
+          apiKey,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      const result: RecipeVariationOutput = await response.json();
 
       if (result.possible && result.newRecipe) {
         onVariationCreated(result.newRecipe.name, result.newRecipe as RecipeDetailsOutput)
