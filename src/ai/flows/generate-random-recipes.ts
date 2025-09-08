@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -41,7 +42,7 @@ const generateRandomRecipesFlow = ai.defineFlow(
       prompt,
       model: model as ModelId,
       output: { schema: GenerateRandomRecipesOutputSchema },
-      config: apiKey ? { apiKey } : undefined,
+      config: { apiKey: apiKey || process.env.GEMINI_API_KEY },
     });
 
     return output!;
