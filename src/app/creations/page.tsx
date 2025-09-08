@@ -10,7 +10,7 @@ const creations = [
         title: 'VerdantWise',
         description: 'An AI-powered assistant to help you level up your garden game. Identify plants, diagnose problems, and get expert advice.',
         link: 'https://verdantwise.vercel.app/',
-        image: 'https://i.ibb.co/JjMvssQB/imgonline-com-ua-resize-MPX297khzml0-Cdf.jpg',
+        image: 'https://i.ibb.co/m1cGLxv/unnamed.png',
         external: true,
     },
     {
@@ -54,7 +54,7 @@ export default function CreationsPage() {
                                 <CardDescription>{creation.description}</CardDescription>
                             </CardHeader>
                             <CardFooter>
-                                <a href={creation.link} target={!creation.external ? '_self' : '_blank'} rel="noopener noreferrer" className="w-full">
+                                <a href={creation.link} target={creation.external ? '_blank' : '_self'} rel="noopener noreferrer" className="w-full">
                                     <Button className="w-full">
                                         Go to App
                                         {creation.external && <ArrowUpRight className="ml-2 h-4 w-4" />}
