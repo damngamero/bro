@@ -3,25 +3,15 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
+.yarn/install-state.gz
 
-# testing
-/coverage
-
-# next.js
+# build cache
 /.next/
 /out/
 
-# production
-/build
-
 # misc
-.DS_Store
+/.DS_Store
 *.pem
 
 # debug
@@ -30,16 +20,34 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# genkit state
+.genkit-state.json
 
-.genkit/*
-.env*
-
-# firebase
-firebase-debug.log
-firestore-debug.log
+# Large files and media
+*.log
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.mp3
+*.wav
+*.aiff
+*.iso
+*.dmg
+*.bin
+*.pdf
+*.psd
